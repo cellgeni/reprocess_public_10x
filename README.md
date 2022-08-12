@@ -122,6 +122,12 @@ for i in ../SRRs/*; do fastq-dump -F --split-files $i; done
 
 Each SRR should produce 3 files: read 1, read 2, index 1. Check some of these reads to make sure you know which read is the barcode, which read is the biological one and which read is the index. The barcode read is 24-28bp, the biological read is normally ~90bp (can be 50-60) and the index read is either 8 or 16bp long. Remove these index reads.
 
+Each SRR will produce these three files but to identify the 2 biological reads (and remove the index) use the following script inside the directory containing fastq files:
+
+```bash
+../actions/rename_srr_fastqs.sh
+```
+
 Next, we need to group these reads back into their original GSM groups. To do this go back to the [NCBI website](https://www.ncbi.nlm.nih.gov) and copy the samples list into a tsv file (sample.tsv). 
 
 ![plot](./images/ncbi_samples.png)
