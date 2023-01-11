@@ -1,5 +1,8 @@
 # Download and reprocess 10x datasets
 
+<img width="1233" height="474" src="https://github.com/cellgeni/reprocess_public_10x/blob/master/img/seriousman2.jpg">
+
+
 This wrapper script can be used for a simple, one-command reprocessing of a publicly available 10x dataset. All you need to do is clone this repo into your home on Farm, and then run 
 
 `nohup ./reprocess_public_10x.sh <series_ID> &> reprocess.log &`
