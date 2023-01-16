@@ -27,7 +27,13 @@ do
   for j in $SMPRUNS
   do
     >&2 echo "==> Run $j belongs to sample $i, moving to directory $i.." 
-    mv ${j}_?.fastq.gz $i
+    if [[ -s ${j}_1.fastq.gz ]]
+    then
+      mv ${j}_?.fastq.gz $i
+    elif [[ -d $j ]] 
+    then
+      mv $j $i
+    fi
   done 
   mv $i ../fastqs 
   >&2 echo "Moving directory $i to /fastqs.."
