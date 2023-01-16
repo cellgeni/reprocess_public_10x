@@ -32,8 +32,10 @@ else
   mkdir $SERIES
 fi 
 
+_PATH=$(realpath "${0}")
+_PATH=$(dirname $_PATH)
 cd $SERIES
-cp ~/reprocess_public_10x/scripts/* .
+cp $_PATH/scripts/* .
 
 ## after all scripts are copied and directories are checked, collect all metadata
 ./collect_metadata.sh $SERIES
