@@ -7,12 +7,13 @@
 SIF=/nfs/cellgeni/singularity/images/starsolo_2-7-10a-alpha-220818_samtools_1-15-1_seqtk-1-13_bbmap_38-97_RSEM-1-3-3.sif
 
 FQDIR=$1
-SAMPLES=$2
-TAG=`head -$LSB_JOBINDEX $SAMPLES | tail -1`
+SERIES=$2
+## this is BSUB job array environmental variable
+TAG=`head -$LSB_JOBINDEX $SERIES.sample.list | tail -1`
 
 SHORTSP=""
-RUNS=`grep -w $TAG sample_to_run.tsv | cut -f2 | tr ',' '|'`
-LONGSP=`grep -P "$RUNS" *.parsed.tsv | cut -f2 | sort | uniq` 
+RUNS=`grep -w $TAG $SERIES.sample_x_run.tsv | cut -f2 | tr ',' '|'`
+LONGSP=`grep -P "$RUNS" $SERIES.parsed.tsv | cut -f2 | sort | uniq` 
 
 if [[ $LONGSP == "Homo sapiens" ]]
 then
@@ -25,10 +26,10 @@ else
   exit 1
 fi
 
-if [[ $FQDIR == "" || $TAG == "" ]]
+if [[ $FQDIR == "" || $SERIES == "" ]]
 then
-  >&2 echo "Usage: ./starsolo_10x_auto.sh <full_path_to_fastq_dir> <sample_tag>"
-  >&2 echo "(make sure you set the correct REF, FQDIR, and SORTEDBAM/NOBAM variables below)"
+  >&2 echo "Usage: ./starsolo_10x_auto.sh <full_path_to_fastq_dir> <series_id (GSE,E-MTAB,PRJNA)>"
+  >&2 echo "(make sure you set the correct REF, WL, and SORTEDBAM/NOBAM variables below)"
   exit 1
 fi
 

@@ -3,10 +3,11 @@
 ## check that all the runs have exactly 2 archived fastq files associated with them, 
 ## and re-organise them according to sample_to_run.tsv 
 
+SERIES=$1
 mkdir fastqs
 
-SAMPLES=`cat sample.list`
-RUNS=`cat run.list`
+SAMPLES=`cat $SERIES.sample.list`
+RUNS=`cat $SERIES.run.list`
 
 ## at this point, all the downloaded or converted fastq.gz files should be in /done_wget
 cd done_wget
@@ -23,7 +24,7 @@ for i in $SAMPLES
 do
   >&2 echo "Moving the files for sample $i:" 
   mkdir $i 
-  SMPRUNS=`grep $i ../sample_to_run.tsv | awk '{print $2}' | tr ',' '\n'`
+  SMPRUNS=`grep $i ../$SERIES.sample_x_run.tsv | awk '{print $2}' | tr ',' '\n'`
   for j in $SMPRUNS
   do
     >&2 echo "==> Run $j belongs to sample $i, moving to directory $i.." 

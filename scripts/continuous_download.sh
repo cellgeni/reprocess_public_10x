@@ -4,11 +4,10 @@
 ### step 0: start downloading everything using transfer queue
 
 SERIES=$1
-URLS="URLs.list"
 
-if [[ $URLS == "" ]]
+if [[ ! -s $SERIES.urls.list ]]
 then 
-  echo "Usage: ./continuous_download.sh <series_id> <URLs_list>"
+  echo "ERROR: File $SERIES.ulrs.list does not exist or is empty; this is too Zen for me to download!"
   exit 1
 fi
 
@@ -19,7 +18,7 @@ echo "Iteration 1: downloading the files..."
 echo "--------------------------------------------------------" 
 
 ## job array submission - use the whole list here
-./bsub_transfer.sh $SERIES wget_restart.sh $URLS
+./bsub_transfer.sh $SERIES wget_restart.sh $SERIES.urls.list
 
 
 ## step 1: check if all the download jobs have finished successfully. 
@@ -32,10 +31,10 @@ done
 ## they did finish! let's run the cleanup  
 echo "Cleanup 1: running the cleanup script..."
 echo "--------------------------------------------------------" 
-./cleanup_wget_downloads.sh $URLS
+./cleanup_wget_downloads.sh $SERIES.urls.list
 
 ## let us repeat until no URLs are left in missing_URLs.list
-while [[ -f missing_URLs.list ]]
+while [[ -f missing_URL.list ]]
 do
   COUNT=$((COUNT+1))
   echo "Iteration $COUNT: downloading the files..." 
@@ -53,7 +52,7 @@ do
   ## they did finish! let's run the cleanup again
   echo "Cleanup $COUNT: running the cleanup script..."
   echo "--------------------------------------------------------" 
-  ./cleanup_wget_downloads.sh $URLS
+  ./cleanup_wget_downloads.sh $SERIES.urls.list
 done
 
 echo "FILE DOWNLOAD: ALL DONE!"  
