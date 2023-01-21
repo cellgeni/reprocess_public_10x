@@ -145,7 +145,13 @@ then
   mv $SERIES.accessions.tsv.tmp $SERIES.accessions.tsv
 
   cut -f 4 $SERIES.accessions.tsv | tr ',' '\n' | sort | uniq > $SERIES.run.list                               
-  cut -f 2,4 $SERIES.accessions.tsv > $SERIES.sample_x_run.tsv
+  ## for GSE, sample=GSM; for E-MTAB/PRJ, sample=ERS/SRS
+  if [[ $SERIES == GSE* ]]
+  then
+    cut -f 1,4 $SERIES.accessions.tsv > $SERIES.sample_x_run.tsv
+  else 
+    cut -f 2,4 $SERIES.accessions.tsv > $SERIES.sample_x_run.tsv
+  fi
 fi
 
 ## finally, classify each run into 3 major types: 

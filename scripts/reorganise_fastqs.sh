@@ -14,9 +14,9 @@ cd done_wget
 
 for i in $RUNS
 do
-  if [[ ! -s ${i}_1.fastq.gz || ! -s ${i}_2.fastq.gz ]]
+  if [[ ! -s ${i}_1.fastq.gz || ! -s ${i}_2.fastq.gz || ! -d $i ]]
   then 
-    >&2 echo "WARNING: Run $i does not seem to have two fastq files associated with it! Please investigate."
+    >&2 echo "WARNING: Run $i does not seem to have two fastq files (or a bamtofastq output directory) associated with it! Please investigate."
   fi 
 done 
 
