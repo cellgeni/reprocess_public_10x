@@ -43,15 +43,15 @@ then
   ## make an accession table. If you adjust the ENA curl query, column numbers will change, so beware
   if [[ -s $SERIES.accessions.tsv ]] 
   then 
-    >&2 "WARNING: file $SERIES.accessions.tsv exists. This shouldn't normally happen. Overwriting the file by parsing $SERIES.ena.tsv.."
+    >&2 echo "WARNING: file $SERIES.accessions.tsv exists. This shouldn't normally happen. Overwriting the file by parsing $SERIES.ena.tsv.."
     rm $SERIES.accessions.tsv
   fi 
 
   for i in `cat $SERIES.sample.list`
   do
-    SMPS=`grep -w $i $SERIES.ena.tsv | cut -f4 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    EXPS=`grep -w $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep -w $i $SERIES.ena.tsv | cut -f7 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    SMPS=`grep $i $SERIES.ena.tsv | cut -f4 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    EXPS=`grep $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    RUNS=`grep $i $SERIES.ena.tsv | cut -f7 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
     echo -e "$i\t$SMPS\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
   done
 
@@ -84,8 +84,8 @@ then
   
   for i in `cat $SERIES.sample.list`
   do
-    EXPS=`grep -w $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep -w $i $SERIES.ena.tsv | cut -f7 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    EXPS=`grep $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    RUNS=`grep $i $SERIES.ena.tsv | cut -f7 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
     echo -e "-\t$i\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
   done
 
@@ -118,8 +118,8 @@ then
 
   for i in `cat $SERIES.sample.list`
   do
-    EXPS=`grep -w $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep -w $i $SERIES.ena.tsv | cut -f7 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    EXPS=`grep $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    RUNS=`grep $i $SERIES.ena.tsv | cut -f7 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
     echo -e "-\t$i\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
   done
 
@@ -137,11 +137,11 @@ then
   >&2 echo "Narrowing down the dataset using the file $SUBSET"
   >&2 echo "New list of the samples to be processed:"
   >&2 cat $SUBSET 
-  grep -w -f $SUBSET $SERIES.sample.list > $SERIES.sample.list.tmp
+  grep -f $SUBSET $SERIES.sample.list > $SERIES.sample.list.tmp
   mv $SERIES.sample.list.tmp $SERIES.sample.list
-  grep -w -f $SUBSET $SERIES.ena.tsv > $SERIES.ena.tsv.tmp 
+  grep -f $SUBSET $SERIES.ena.tsv > $SERIES.ena.tsv.tmp 
   mv $SERIES.ena.tsv.tmp $SERIES.ena.tsv 
-  grep -w -f $SUBSET $SERIES.accessions.tsv > $SERIES.accessions.tsv.tmp 
+  grep -f $SUBSET $SERIES.accessions.tsv > $SERIES.accessions.tsv.tmp 
   mv $SERIES.accessions.tsv.tmp $SERIES.accessions.tsv
 
   cut -f 4 $SERIES.accessions.tsv | tr ',' '\n' | sort | uniq > $SERIES.run.list                               
