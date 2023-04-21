@@ -13,16 +13,23 @@ do
   TYPE="SRA"
   LOC=""
   SPECIES=`grep -w $i $SERIES.ena.tsv | cut -f10`
-  GZP=`grep -w $i $SERIES.ena.tsv | tr '\t' '\n' | grep "_1\.fastq.gz" | grep "_2\.fastq.gz"`
-  BAM=`grep -w $i $SERIES.ena.tsv | tr '\t' '\n' | tr ';' '\n' | grep -v "\.bai" | grep "\.bam"` ## don't need the BAM index which is often there
-  SRA=`grep -w $i $SERIES.ena.tsv | cut -f13` ## not sure how robust this is, but practice will showeth; UPD: is robust. 
+  GZ1=`grep -w $i $SERIES.ena.tsv | cut -f11 | grep "_1\.fastq.gz" | grep "_2\.fastq.gz"`
+  GZ2=`grep -w $i $SERIES.ena.tsv | cut -f12 | grep "_R1_.*\.fastq.gz" | grep "_R2_.*\.fastq.gz"`
+  BAM=`grep -w $i $SERIES.ena.tsv | cut -f12 | tr ';' '\n' | grep -v "\.bai" | grep "\.bam"` ## don't need the BAM index which is often there
+  SRA=`grep -w $i $SERIES.ena.tsv | cut -f13` 
   
-  if [[ $GZP != "" ]]
+  if [[ $GZ1 != "" ]]
   then
     TYPE="GZP"
-    LOC=$GZP
-    echo $GZP | tr ';' '\n' >> $SERIES.urls.list
+    LOC=$GZ1
+    echo $GZ1 | tr ';' '\n' >> $SERIES.urls.list
     >&2 echo "Sample $i is available via ENA as paired-end fastq archive: $LOC"
+  elif [[ $GZ2 != "" ]]
+  then
+    TYPE="GZP"
+    LOC=$GZ2
+    echo $GZ2 | tr ';' '\n' >> $SERIES.urls.list
+    >&2 echo "Sample $i is available via ArrayExpress as original submitter's paired-end fastq: $LOC"
   elif [[ $BAM != "" ]]
   then
     TYPE="BAM"

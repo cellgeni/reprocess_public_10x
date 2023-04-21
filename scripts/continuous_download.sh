@@ -34,7 +34,7 @@ echo "--------------------------------------------------------"
 ./cleanup_wget_downloads.sh $SERIES.urls.list
 
 ## let us repeat until no URLs are left in missing_URLs.list
-while [[ -f missing_URL.list ]]
+while [[ -f missing_URLs.list ]]
 do
   COUNT=$((COUNT+1))
   echo "Iteration $COUNT: downloading the files..." 

@@ -16,8 +16,17 @@ for i in $RUNS
 do
   if [[ ! -s ${i}_1.fastq.gz || ! -s ${i}_2.fastq.gz || ! -d $i ]]
   then 
-    >&2 echo "WARNING: Run $i does not seem to have two fastq files (or a bamtofastq output directory) associated with it! Please investigate."
-  fi 
+    >&2 echo "WARNING: Run $i does not seem to have two fastq files (or a bamtofastq output directory) associated with it!"
+    ## let's check if there are original submitter's fastq files (AE does that): 
+    URL=`grep $i ../$SERIES.parsed.tsv | cut -f3 | tr ';' '\n' | head -n1`
+    ORIGFQ=`basename $URL`
+    if [[ $URL != "" && -s $ORIGFQ ]]
+    then
+      >&2 echo "Original submitter's fastq files ($ORIGFQ etc) found for $i.."
+    else 
+      >&2 echo "WARNING: No files associated with run $i found - please investigate!"
+    fi 
+  fi
 done 
 
 for i in $SAMPLES
@@ -34,6 +43,14 @@ do
     elif [[ -d $j ]] 
     then
       mv $j $i
+    else
+      ## special case for original submitter's fastqs: 
+      URLS=`grep $j ../$SERIES.parsed.tsv | cut -f3 | tr ';' '\n'`
+      for k in $URLS
+      do
+        ORIGFQ=`basename $k`
+        mv $ORIGFQ $i
+      done
     fi
   done 
   mv $i ../fastqs 
