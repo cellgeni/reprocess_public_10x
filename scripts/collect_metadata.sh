@@ -51,7 +51,7 @@ then
   do
     SMPS=`grep $i $SERIES.ena.tsv | cut -f4 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
     EXPS=`grep $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep $i $SERIES.ena.tsv | cut -f7 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    RUNS=`grep $i $SERIES.ena.tsv | cut -f1 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
     echo -e "$i\t$SMPS\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
   done
 
@@ -85,7 +85,7 @@ then
   for i in `cat $SERIES.sample.list`
   do
     EXPS=`grep $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep $i $SERIES.ena.tsv | cut -f7 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    RUNS=`grep $i $SERIES.ena.tsv | cut -f1 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
     echo -e "-\t$i\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
   done
 
@@ -119,7 +119,7 @@ then
   for i in `cat $SERIES.sample.list`
   do
     EXPS=`grep $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep $i $SERIES.ena.tsv | cut -f7 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    RUNS=`grep $i $SERIES.ena.tsv | cut -f1 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
     echo -e "-\t$i\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
   done
 
