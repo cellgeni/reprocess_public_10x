@@ -14,17 +14,18 @@ cd done_wget
 
 for i in $RUNS
 do
-  if [[ ! -s ${i}_1.fastq.gz || ! -s ${i}_2.fastq.gz || ! -d $i ]]
+  ## files named _1(2).fastq.gz are proper ENA fastq files, and directory is the output of bam2fastq
+  if [[ ! -s ${i}_1.fastq.gz || ! -s ${i}_2.fastq.gz || ! -d $i ]]  
   then 
     >&2 echo "WARNING: Run $i does not seem to have two fastq files (or a bamtofastq output directory) associated with it!"
     ## let's check if there are original submitter's fastq files (AE does that): 
     URL=`grep $i ../$SERIES.parsed.tsv | cut -f3 | tr ';' '\n' | head -n1`
-    ORIGFQ=`basename $URL`
-    if [[ $URL != "" && -s $ORIGFQ ]]
+    ORIFQ=`basename $URL`
+    if [[ $URL != "" && -s $ORIFQ ]]
     then
-      >&2 echo "Original submitter's fastq files ($ORIGFQ etc) found for $i.."
+      >&2 echo "Original submitter's fastq files ($ORIFQ etc) found for $i.."
     else 
-      >&2 echo "WARNING: No files associated with run $i found - please investigate!"
+      >&2 echo "WARNING: No ENA/BAM/original submitter's fastq files associated with run $i found - please investigate!"
     fi 
   fi
 done 
@@ -48,8 +49,8 @@ do
       URLS=`grep $j ../$SERIES.parsed.tsv | cut -f3 | tr ';' '\n'`
       for k in $URLS
       do
-        ORIGFQ=`basename $k`
-        mv $ORIGFQ $i
+        ORIFQ=`basename $k`
+        mv $ORIFQ $i
       done
     fi
   done 

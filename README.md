@@ -2,9 +2,9 @@
 
 <img src="https://github.com/cellgeni/reprocess_public_10x/blob/main/img/seriousman2.png">
 
-This wrapper script can be used for a simple, one-command reprocessing of a publicly available 10x dataset. All you need to do is clone this repo anywhere on Farm, and then run 
+This wrapper script can be used for a simple, one-command reprocessing of a publicly available 10x dataset. All you need to do is clone this repo anywhere on Farm, add the location of `reprocess_public_10x` to `$PATH` variable, and then run the following command in the directory with lots of space:  
 
-`./reprocess_public_10x.sh <series_ID> &> <series_ID>.reprocess.log &`
+`reprocess_public_10x.sh <series_ID> &> <series_ID>.reprocess.log &`
 
 You should use `nohup`/`tmux`/`screen`/`disown` or any other tool you like to keep the process in the background, since the processing will probably take a while. This collection of scripts is Sanger-specific and Farm-specific, and would need to be modified substantially to work somewhere else. 
 
@@ -16,7 +16,7 @@ Currently, the following platforms are supported:
 
 The processing is done under assumption of one 10x run per GSM in case of GEO, or one SRS/ERS in case of ArrayExpress/SRA/ENA.
 
-In case your series contains non-10x things you don't want to download, make a file with a list of GSM/SRS/ERS IDs, and pass it to the main script as a second argument. In this case, only samples present in the list will be downloaded and processed: 
+In case your series contains non-10x things you don't want to download, make a file with a list of GSM/SRS/ERS IDs, and pass it to the main script as a second argument. Only samples present in the list will be downloaded and processed: 
 
 `./reprocess_public_10x.sh <series_ID> [sample_list] &> <series_ID>.reprocess.log &`
 
