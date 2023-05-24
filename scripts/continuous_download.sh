@@ -5,6 +5,14 @@
 
 SERIES=$1
 
+if (( $# != 1 ))
+then
+  >&2 echo "USAGE: ./continuous_download.sh <series_id>"
+  >&2 echo
+  >&2 echo "(requires bsub_transfer.sh, cleanup_wget_downloads.sh, and non-empty <series_id>.urls.list)" 
+  exit 1
+fi
+
 if [[ ! -s $SERIES.urls.list ]]
 then 
   echo "ERROR: File $SERIES.ulrs.list does not exist or is empty; this is too Zen for me to download!"

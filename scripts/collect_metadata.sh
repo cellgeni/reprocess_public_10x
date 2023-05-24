@@ -7,12 +7,26 @@ SUBSET=$2
 ## for now its 3 main ones: GEO, ArrayExpress, and naked SRA/ENA project ID
 ## got rid of ffq in this version, this works faster and more to the point (but is more ENA-dependent)
 
+if (( $# != 1 && $# != 2 ))
+then
+  >&2 echo "USAGE: ./collect_metadata.sh <series_id> [sample_list]"
+  >&2 echo
+  >&2 echo "(requires curl_ena_metadata.sh and parse_ena_metadata.sh present in the same directory)" 
+  exit 1
+fi
+
 if [[ $SERIES == GSE* ]]
 then
   ## download the so-called soft_family file, and use it to generate same files as above
   PAD=`echo $SERIES | perl -ne 's/\d{3}$/nnn/; print'`
   wget -O ${SERIES}_family.soft.gz https://ftp.ncbi.nlm.nih.gov/geo/series/$PAD/$SERIES/soft/${SERIES}_family.soft.gz
+  ## -f overwrites the old stuff
   gzip -fd ${SERIES}_family.soft.gz
+  if [[ ! -s ${SERIES}_family.soft ]]
+  then
+    >&2 echo "ERROR: Failed to download ${SERIES}_family.soft file; please make sure the series you requested exists, or fix the download URL!"
+    exit 1
+  fi
 
   ## samples here are GSM IDs; usually for a 10x GSM==SRS==SRX, but I haven't checked *all* of the SRA you know 
   grep Sample_geo_accession ${SERIES}_family.soft | awk '{print $3}' | sort | uniq > $SERIES.sample.list
@@ -46,10 +60,10 @@ then
     TRIES=$((TRIES+1))
     if (( $TRIES > 5 )) 
     then
+      >&2 echo "WARNING: No ENA records can be retrieved for GEO projects listed in $SERIES.project.list!"
       if [[ $SUBGSE == "" ]]
       then 
-        >&2 echo "WARNING: No ENA records can be retrieved for projects listed in $SERIES.project.list!"
-        >&2 echo "ERROR: No GSE subseries were listed in ${SERIES}_family.soft - no alternative PRJNA* to be found!"
+        >&2 echo "ERROR: No GSE subseries were listed in ${SERIES}_family.soft - no alternative PRJNA* to be found, and no ENA entries can be retrieved!"
         exit 1
       else 
         >&2 echo "WARNING: replacing $SERIES.project.list with sub-series projects.."
@@ -73,7 +87,7 @@ then
           TRIES=$((TRIES+1))
           if (( $TRIES > 5 ))
           then
-            >&2 echo "ERROR: Still no ENA records can be retrieved for the SUBSERIES projects listed in $SERIES.project.list, I quit!"
+            >&2 echo "ERROR: Still no ENA records can be retrieved for the GEO SUBSERIES projects listed in $SERIES.project.list, I quit!"
             exit 1
           fi
         done
@@ -104,16 +118,30 @@ elif [[ $SERIES == E-MTAB* ]]
 then
   ## sdrf's are wonderful, but don't have the project ID, which is *annoying*. That's OK though, we'll go by SRS. 
   wget -O $SERIES.sdrf.txt https://www.ebi.ac.uk/biostudies/files/$SERIES/$SERIES.sdrf.txt
+  wget -O $SERIES.idf.txt https://www.ebi.ac.uk/biostudies/files/$SERIES/$SERIES.idf.txt
+  if [[ ! -s $SERIES.sdrf.txt ]] 
+  then
+    >&2 echo "ERROR: Failed to download $SERIES.sdrf.txt file; please make sure the series you requested exists, or fix the download URL!"
+    exit 1
+  fi 
 
   ## samples are ERS in case of ArrayExpress. Why not ERX, you might ask? Yes, ask you might.   
   cat $SERIES.sdrf.txt | tr '\t' '\n' | grep "^ERS" | sort | uniq > $SERIES.sample.list
 
   ## curl info about each run (SRR/ERR/DRR) from ENA API; in this case we use ERS IDs 
   RET=1
-  until [ ${RET} -eq 0 ]
+  TRIES=1
+  until (( $RET == 0 )) 
   do
+    ## for ArrayExpress, we query by sample ID because sdrf doesn't list the BioProject ID
     ./curl_ena_metadata.sh $SERIES.sample.list > $SERIES.ena.tsv 
     RET=$?
+    TRIES=$((TRIES+1))
+    if (( $TRIES > 5 )) 
+    then
+      >&2 echo "ERROR: No ENA records can be retrieved for ArrayExpress samples $SERIES.sample.list!"
+      exit 1
+    fi 
     sleep 1
   done
 
@@ -141,10 +169,17 @@ then
 
   ## curl info about each run (SRR/ERR/DRR) from ENA API; v2 pulls GSM data etc 
   RET=1
-  until [ ${RET} -eq 0 ]
+  TRIES=1
+  until (( $RET == 0 )) 
   do
     ./curl_ena_metadata.sh $SERIES.project.list > $SERIES.ena.tsv 
     RET=$?
+    TRIES=$((TRIES+1))
+    if (( $TRIES > 5 )) 
+    then
+      >&2 echo "ERROR: No ENA records can be retrieved for BioProject(s) $SERIES.project.list!"
+      exit 1
+    fi 
     sleep 1
   done
 

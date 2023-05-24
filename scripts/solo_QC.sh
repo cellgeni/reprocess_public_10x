@@ -1,7 +1,7 @@
 #!/bin/bash 
 
+## parse STARsolo outputs, and summarise all the useful stats in a neat table
 echo -e "Sample\tRd_all\tRd_in_cells\tFrc_in_cells\tUMI_in_cells\tCells\tMed_nFeature\tGood_BC\tWL\tSpecies\tPaired\tStrand\tall_u+m\tall_u\texon_u+m\texon_u\tfull_u+m\tfull_u"
-
 
 for i in *
 do

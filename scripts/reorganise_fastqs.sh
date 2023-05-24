@@ -4,6 +4,14 @@
 ## and re-organise them according to sample_to_run.tsv 
 
 SERIES=$1
+if (( $# != 1 ))
+then
+  >&2 echo "USAGE: ./reorganize_fastq.sh <series_id>"
+  >&2 echo
+  >&2 echo "(requires non-empty <series_id>.sample.list, <series_id>.run.list, and <series_id>.sample_x_run.list)" 
+  exit 1
+fi
+
 mkdir fastqs
 
 SAMPLES=`cat $SERIES.sample.list`
