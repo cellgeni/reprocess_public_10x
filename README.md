@@ -18,7 +18,7 @@ The processing is done under assumption of one 10x run per GSM in case of GEO, o
 
 In case your series contains non-10x things you don't want to download, make a file with a list of GSM/SRS/ERS IDs, and pass it to the main script as a second argument. Only samples present in the list will be downloaded and processed: 
 
-`./reprocess_public_10x.sh <series_ID> [sample_list] &> <series_ID>.reprocess.log &`
+`reprocess_public_10x.sh <series_ID> [sample_list] &> <series_ID>.reprocess.log &`
 
 ## But how does this magick works?!
 
