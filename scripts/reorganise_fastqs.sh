@@ -8,7 +8,7 @@ if (( $# != 1 ))
 then
   >&2 echo "USAGE: ./reorganize_fastq.sh <series_id>"
   >&2 echo
-  >&2 echo "(requires non-empty <series_id>.sample.list, <series_id>.run.list, and <series_id>.sample_x_run.list)" 
+  >&2 echo "(requires non-empty <series_id>.sample.list, <series_id>.run.list, <series_id>.parsed.tsv, and <series_id>.sample_x_run.list)" 
   exit 1
 fi
 
@@ -17,25 +17,50 @@ mkdir fastqs
 SAMPLES=`cat $SERIES.sample.list`
 RUNS=`cat $SERIES.run.list`
 
-## at this point, all the downloaded or converted fastq.gz files should be in /done_wget
+## at this point, all the downloaded or generated (from BAM or SRA) fastq.gz files should be in /done_wget
+## four general cases are possible; type from <series_id>.parsed.tsv listed: 
+## 1) gzipped files from ENA - these are always formatted as S/ERR12345_1/2.fastq.gz, type ENAFQ
+## 2) gzipped files from original submitter - anything can happen in terms of format, type ORIFQ 
+## 3) files converted from SRA - these should follow same convention as ENA, type SRA; 
+## 4) files converted from BAM - these are located in folders and have strict Cell Ranger format, type BAM 
+
 cd done_wget
 
 for i in $RUNS
 do
-  ## files named _1(2).fastq.gz are proper ENA fastq files, and directory is the output of bam2fastq
-  if [[ ! -s ${i}_1.fastq.gz || ! -s ${i}_2.fastq.gz || ! -d $i ]]  
-  then 
-    >&2 echo "WARNING: Run $i does not seem to have two fastq files (or a bamtofastq output directory) associated with it!"
-    ## let's check if there are original submitter's fastq files (AE does that): 
-    URL=`grep $i ../$SERIES.parsed.tsv | cut -f3 | tr ';' '\n' | head -n1`
-    ORIFQ=`basename $URL`
-    if [[ $URL != "" && -s $ORIFQ ]]
-    then
-      >&2 echo "Original submitter's fastq files ($ORIFQ etc) found for $i.."
-    else 
-      >&2 echo "WARNING: No ENA/BAM/original submitter's fastq files associated with run $i found - please investigate!"
+	TYPE=`grep -wF $i ../$SERIES.parsed.tsv | cut -f4`
+	if [[ $TYPE == "ENAFQ" || $TYPE == "SRA" ]]
+	then
+    if [[ ! -s ${i}_1.fastq.gz || ! -s ${i}_2.fastq.gz ]]  
+    then 
+		  >&2 echo "ERROR: Run $i (type $TYPE) does not have two fastq files associated with it! Exiting.."
+			exit 1
     fi 
-  fi
+	elif [[ $TYPE == "BAM" ]]
+	then
+		if [[ ! -d $i ]]
+		then 
+			>&2 echo "ERROR: Run $i (type $TYPE) did not generate an output directory! Exiting.."
+			exit 1
+		fi 
+
+		NR1=`find $i/* | grep -c "_R1_...\.fastq.gz"`
+		NR2=`find $i/* | grep -c "_R2_...\.fastq.gz"`
+		if (( $NR1 != $NR2 || $NR1 == 0 || $NR2 == 0 )) 
+		then 
+			>&2 echo "ERROR: Run $i (type $TYPE) has $NR1 R1 files and $NR2 R2 files, which should not happen. Exiting.." 
+			exit 1
+		fi
+	elif [[ $TYPE == "ORIFQ" ]]
+	then
+		NR1=`find * | grep $i | grep -cP "_1\.f.*q\.gz|R1\.f.*q\.gz|_R1_.*\.f.*q\.gz"`
+		NR2=`find * | grep $i | grep -cP "_2\.f.*q\.gz|R2\.f.*q\.gz|_R2_.*\.f.*q\.gz"`
+    if (( $NR1 != $NR2 || $NR1 == 0 || $NR2 == 0 )) 
+    then 
+      >&2 echo "ERROR: Run $i (type $TYPE) has $NR1 R1 files and $NR2 R2 files, which should not happen. Exiting.." 
+      exit 1
+    fi
+	fi
 done 
 
 for i in $SAMPLES

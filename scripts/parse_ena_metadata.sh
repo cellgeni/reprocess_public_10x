@@ -26,19 +26,19 @@ do
 
   if [[ $AEGZ != "" ]]
   then
-    TYPE="GZP"
+    TYPE="ORIFQ"
     LOC=$AEGZ
     echo $AEGZ | tr ';' '\n' >> $SERIES.urls.list
     >&2 echo "Sample $i is available via ArrayExpress as paired-end fastq archive: $LOC"
   elif [[ $ENAGZ != "" ]]
   then
-    TYPE="GZP"
+    TYPE="ENAFQ"
     LOC=$ENAGZ
     echo $ENAGZ | tr ';' '\n' >> $SERIES.urls.list
     >&2 echo "Sample $i is available via ENA as a paired-end fastq: $LOC"
   elif [[ $ORIFQ != "" ]]
   then
-    TYPE="GZP"
+    TYPE="ORIFQ"
     LOC=$ORIFQ
     echo $ORIFQ | tr ';' '\n' >> $SERIES.urls.list
     >&2 echo "Sample $i is available via ENA as original submitter's fastq: $LOC"

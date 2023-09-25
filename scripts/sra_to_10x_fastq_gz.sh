@@ -1,26 +1,25 @@
 #!/bin/bash -e
 
-## V2 to identify 10X samples 
-## use 16 cores
+## V3: identify 10X samples, faster processing with tuned fasterq-dump & pigz 
 
 PARSED=$1
 SRA=`grep -w "SRA$" $PARSED | cut -f1 | head -$LSB_JOBINDEX | tail -1` 
 WL=/nfs/cellgeni/STAR/whitelists
+CPUS=16 
 
-## first, fastq-dump; make sure vdb-config has been ran 
+## fasterq-dump with extra settings tailored to our Farm environment 
 
-fastq-dump -F --split-files $SRA
+fasterq-dump --threads $CPUS -b 10M -c 100M -m 5000M --split-files --include-technical $SRA
 
 ## then, find which reads contain actual 10X whitelist
 
 BC=""
-
 for i in ${SRA}*fastq
 do
-  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | grep -F -f $WL/737K-april-2014_rc.txt | wc -l > $i.v1.count &
-  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | grep -F -f $WL/737K-august-2016.txt   | wc -l > $i.v2.count &
-  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | grep -F -f $WL/3M-february-2018.txt   | wc -l > $i.v3.count &
-  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | grep -F -f $WL/737K-arc-v1.txt        | wc -l > $i.arc.count &
+  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-14 | grep -F -f $WL/737K-april-2014_rc.txt | wc -l > $i.v1.count &
+  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-16 | grep -F -f $WL/737K-august-2016.txt   | wc -l > $i.v2.count &
+  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-16 | grep -F -f $WL/3M-february-2018.txt   | wc -l > $i.v3.count &
+  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-16 | grep -F -f $WL/737K-arc-v1.txt        | wc -l > $i.arc.count &
 done 
 
 wait
@@ -32,7 +31,7 @@ do
   N=`cat $i`
   KIT=${i%%.count}
   KIT=${KIT##$SRA*.fastq.}
-  if (( $N > 80000 ))
+  if (( $N > 50000 ))
   then
     BC=${i%%.$KIT.count}
     echo "Barcode file: $BC, matching whitelist: $KIT, number of matched barcodes: $N"
@@ -46,7 +45,7 @@ then
   echo "WARNING: More than 1 file/whitelist match! This should not happen, please investigate the files in the log above." 
 elif (( $NMATCH == 0 )) 
 then
-  echo "WARNING: No files matched any of the whitelists! Most probably, this experiment is not 10X single-cell RNA-seq". 
+  echo "WARNING: No files matched any of the whitelists! Most likely, this experiment is not a 10X single-cell RNA-seq". 
 fi 
 
 ## finally, find the longest read among the remaining and nominate it biological if reads are identified as 10x 
@@ -65,9 +64,9 @@ then
     fi
   done
   
-  echo "Longest read beside the barcode one: $BIO, mean read length: $BLEN"
+	echo "The longest read (aside from the barcode-carrying read): $BIO, mean read length: $BLEN"
   
-  ## move things around and gzip them
+	## delete all the unnecessary fastq files (index etc), rename, and gzip R1/R2
   mv $BC $SRA.tmp1
   mv $BIO $SRA.tmp2
   if [[ `ls | grep $SRA | grep "fastq$"` != "" ]] 
@@ -77,13 +76,12 @@ then
   mv $SRA.tmp1 ${SRA}_1.fastq
   mv $SRA.tmp2 ${SRA}_2.fastq
   
-  gzip ${SRA}_1.fastq &
-  gzip ${SRA}_2.fastq &
-  wait 
-else 
+  pigz -p $CPUS ${SRA}_1.fastq
+  pigz -p $CPUS ${SRA}_2.fastq
+else
+	## if things look weird, just compress everything, we'll sort it later
   for i in ${SRA}*fastq
   do
-    gzip $i & 
+    pigz -p $CPUS $i 
   done
-  wait
 fi 
