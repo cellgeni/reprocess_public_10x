@@ -237,8 +237,8 @@ then
 fi
 
 ## finally, let's max-CR bzip all unmapped reads with multicore pbzip2 
-pbzip2 -9 -p $CPUS Unmapped.out.mate1
-pbzip2 -9 -p $CPUS Unmapped.out.mate2
+pbzip2 -9 -m2000 -p$CPUS Unmapped.out.mate1
+pbzip2 -9 -m2000 -p$CPUS Unmapped.out.mate2
 
 ## remove test files 
 rm -rf test.R?.fastq test_strand
