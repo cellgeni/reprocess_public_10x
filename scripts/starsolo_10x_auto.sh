@@ -52,18 +52,18 @@ mkdir $TAG && cd $TAG
 ## the command below will generate a comma-separated list for each read
 R1=""
 R2=""
-if [[ `find $FQDIR/* | grep $TAG | grep "_1\.f.*q"` != "" ]]
+if [[ `find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_1\.f.*q"` != "" ]]
 then 
-  R1=`find $FQDIR/* | grep $TAG | grep "_1\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
-  R2=`find $FQDIR/* | grep $TAG | grep "_2\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
-elif [[ `find $FQDIR/* | grep $TAG | grep "R1\.f.*q"` != "" ]]
+  R1=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_1\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+  R2=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_2\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+elif [[ `find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "R1\.f.*q"` != "" ]]
 then
-  R1=`find $FQDIR/* | grep $TAG | grep "R1\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
-  R2=`find $FQDIR/* | grep $TAG | grep "R2\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
-elif [[ `find $FQDIR/* | grep $TAG | grep "_R1_.*\.f.*q"` != "" ]]
+  R1=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "R1\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+  R2=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "R2\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+elif [[ `find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_R1_.*\.f.*q"` != "" ]]
 then
-  R1=`find $FQDIR/* | grep $TAG | grep "_R1_.*\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
-  R2=`find $FQDIR/* | grep $TAG | grep "_R2_.*\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+  R1=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_R1_.*\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+  R2=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_R2_.*\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
 else 
   >&2 echo "ERROR: No appropriate fastq files were found! Please check file formatting, and check if you have set the right FQDIR."
   exit 1
@@ -164,11 +164,17 @@ then
 fi
 
 ## yet another failsafe! Some geniuses managed to sequence v3 10x with a 26bp R1, which also causes STARsolo grief. This fixes it.
+## yet another failsafe! Some geniuses managed to sequence v3 10x with a 26bp R1, which also causes STARsolo grief. This fixes it.
 if (( $CBLEN + $UMILEN > $R1LEN ))
 then
-	NEWUMI=$((R1LEN-CBLEN))
-	>&2 echo "WARNING: Read 1 length is less than the sum of appropriate barcode and UMI. Changing UMI setting from $UMILEN to $NEWUMI!"
-	UMILEN=$NEWUMI
+  NEWUMI=$((R1LEN-CBLEN))
+  BCUMI=$((UMILEN+CBLEN))
+  >&2 echo "WARNING: Read 1 length ($R1LEN) is less than the sum of appropriate barcode and UMI ($BCUMI). Changing UMI setting from $UMILEN to $NEWUMI!"
+  UMILEN=$NEWUMI
+elif (( $CBLEN + $UMILEN < $R1LEN ))
+then
+  BCUMI=$((UMILEN+CBLEN))
+  >&2 echo "WARNING: Read 1 length ($R1LEN) is more than the sum of appropriate barcode and UMI ($BCUMI)."
 fi
 
 ## finally, see if you have 5' or 3' experiment. I don't know and easier way than to run a test alignment:  
