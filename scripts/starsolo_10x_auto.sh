@@ -1,6 +1,6 @@
 #!/bin/bash -e 
 
-## v3.1 of STARsolo wrappers is set up to guess the chemistry automatically
+## v3.2 of STARsolo wrappers is set up to guess the chemistry automatically
 ## newest version of the script uses STAR v2.7.10a with EM multimapper processing 
 ## in STARsolo which on by default; the extra matrix can be found in /raw subdir 
 
@@ -22,7 +22,7 @@ TAG=`head -$LSB_JOBINDEX $SERIES.sample.list | tail -1`
 
 SHORTSP=""
 RUNS=`grep -w $TAG $SERIES.sample_x_run.tsv | cut -f2 | tr ',' '|'`
-LONGSP=`grep -P "$RUNS" $SERIES.parsed.tsv | cut -f2 | sort | uniq` 
+LONGSP=`grep -P "$RUNS" $SERIES.parsed.tsv | cut -f2 | sort | uniq`
 
 if [[ $LONGSP == "Homo sapiens" ]]
 then
@@ -30,7 +30,7 @@ then
 elif [[ $LONGSP == "Mus musculus" ]]
 then
   SHORTSP="mouse"
-else 
+else
   >&2 echo "ERROR: It seems like sample $TAG is neither human no mouse! please investigate." 
   exit 1
 fi
@@ -52,18 +52,18 @@ mkdir $TAG && cd $TAG
 ## the command below will generate a comma-separated list for each read
 R1=""
 R2=""
-if [[ `find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_1\.f.*q"` != "" ]]
+if [[ `find $FQDIR/* | grep -P "\/$TAG[\/\._]" | grep "_1\.f.*q"` != "" ]]
 then 
-  R1=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_1\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
-  R2=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_2\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
-elif [[ `find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "R1\.f.*q"` != "" ]]
+  R1=`find $FQDIR/* | grep -P "\/$TAG[\/\._]" | grep "_1\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+  R2=`find $FQDIR/* | grep -P "\/$TAG[\/\._]" | grep "_2\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+elif [[ `find $FQDIR/* | grep -P "\/$TAG[\/\._]" | grep "R1\.f.*q"` != "" ]]
 then
-  R1=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "R1\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
-  R2=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "R2\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
-elif [[ `find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_R1_.*\.f.*q"` != "" ]]
+  R1=`find $FQDIR/* | grep -P "\/$TAG[\/\._]" | grep "R1\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+  R2=`find $FQDIR/* | grep -P "\/$TAG[\/\._]" | grep "R2\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+elif [[ `find $FQDIR/* | grep -P "\/$TAG[\/\._]" | grep "_R1_.*\.f.*q"` != "" ]]
 then
-  R1=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_R1_.*\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
-  R2=`find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "_R2_.*\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+  R1=`find $FQDIR/* | grep -P "\/$TAG[\/\._]" | grep "_R1_.*\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
+  R2=`find $FQDIR/* | grep -P "\/$TAG[\/\._]" | grep "_R2_.*\.f.*q" | sort | tr '\n' ',' | sed "s/,$//g"`
 else 
   >&2 echo "ERROR: No appropriate fastq files were found! Please check file formatting, and check if you have set the right FQDIR."
   exit 1
@@ -91,9 +91,12 @@ $CMD seqtk sample -s100 $R2F 200000 > test.R2.fastq &
 wait
 
 ## see if the original fastq files are archived: 
-if [[ `find $FQDIR/* | grep $TAG | grep "\.gz$"` != "" ]]
+if [[ `find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "\.gz$"` != "" ]]
 then  
   GZIP="--readFilesCommand zcat"
+elif [[ `find $FQDIR/* | grep -P "$TAG[\/\._]" | grep "\.bz2$"` != "" ]]
+then
+  GZIP="--readFilesCommand bzcat"
 fi
 
 NBC1=`cat test.R1.fastq | awk 'NR%4==2' | cut -c-14 | grep -F -f $WL/737K-april-2014_rc.txt | wc -l`
@@ -163,7 +166,6 @@ then
   UMILEN=10
 fi
 
-## yet another failsafe! Some geniuses managed to sequence v3 10x with a 26bp R1, which also causes STARsolo grief. This fixes it.
 ## yet another failsafe! Some geniuses managed to sequence v3 10x with a 26bp R1, which also causes STARsolo grief. This fixes it.
 if (( $CBLEN + $UMILEN > $R1LEN ))
 then
@@ -242,7 +244,7 @@ then
   $CMD samtools index -@16 Aligned.sortedByCoord.out.bam
 fi
 
-## finally, let's max-CR bzip all unmapped reads with multicore pbzip2 
+## max-CR bzip all unmapped reads with multicore pbzip2 
 pbzip2 -9 -m2000 -p$CPUS Unmapped.out.mate1
 pbzip2 -9 -m2000 -p$CPUS Unmapped.out.mate2
 

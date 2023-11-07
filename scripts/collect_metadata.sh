@@ -105,9 +105,10 @@ then
 
   for i in `cat $SERIES.sample.list`
   do
-    SMPS=`grep $i $SERIES.ena.tsv | cut -f4 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    EXPS=`grep $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep $i $SERIES.ena.tsv | cut -f1 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+		## changed this because ENA web API is inconsistent with column order..
+    SMPS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    EXPS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    RUNS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
     echo -e "$i\t$SMPS\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
   done
 
@@ -154,8 +155,8 @@ then
   
   for i in `cat $SERIES.sample.list`
   do
-    EXPS=`grep $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep $i $SERIES.ena.tsv | cut -f1 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    EXPS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    RUNS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | uniq | tr '\n' ',' | sed "s/,$//"`
     echo -e "-\t$i\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
   done
 
@@ -191,12 +192,12 @@ then
   fi 
 
   ## for PRJ*, samples are SRS or ERS IDs: 
-  cut -f4 $SERIES.ena.tsv | sort | uniq > $SERIES.sample.list 
+  cat $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq > $SERIES.sample.list 
 
   for i in `cat $SERIES.sample.list`
   do
-    EXPS=`grep $i $SERIES.ena.tsv | cut -f5 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep $i $SERIES.ena.tsv | cut -f1 | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    EXPS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    RUNS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
     echo -e "-\t$i\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
   done
 

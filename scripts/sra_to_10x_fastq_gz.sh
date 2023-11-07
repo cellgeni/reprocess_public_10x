@@ -9,7 +9,7 @@ CPUS=16
 
 ## fasterq-dump with extra settings tailored to our Farm environment 
 
-fasterq-dump --threads $CPUS -b 10M -c 100M -m 5000M --split-files --include-technical $SRA
+parallel-fastq-dump -t $CPUS -T . --split-files -F -s $SRA
 
 ## then, find which reads contain actual 10X whitelist
 
