@@ -33,32 +33,29 @@ do
 	then
     if [[ ! -s ${i}_1.fastq.gz || ! -s ${i}_2.fastq.gz ]]  
     then 
-		  >&2 echo "ERROR: Run $i (type $TYPE) does not have two fastq files associated with it! Exiting.."
-			exit 1
+		  >&2 echo "WARNING: Run $i (type $TYPE) does not have two fastq files associated with it! Please investigate.."
     fi 
 	elif [[ $TYPE == "BAM" ]]
 	then
 		if [[ ! -d $i ]]
 		then 
-			>&2 echo "ERROR: Run $i (type $TYPE) did not generate an output directory! Exiting.."
-			exit 1
+			>&2 echo "WARNING: Run $i (type $TYPE) did not generate an output directory! Please investigate.."
 		fi 
 
 		NR1=`find $i/* | grep -c "_R1_...\.fastq.gz"`
 		NR2=`find $i/* | grep -c "_R2_...\.fastq.gz"`
 		if (( $NR1 != $NR2 || $NR1 == 0 || $NR2 == 0 )) 
 		then 
-			>&2 echo "ERROR: Run $i (type $TYPE) has $NR1 R1 files and $NR2 R2 files, which should not happen. Exiting.." 
-			exit 1
+			>&2 echo "WARNING: Run $i (type $TYPE) has $NR1 R1 files and $NR2 R2 files, which should not happen. Please investigate.." 
 		fi
 	elif [[ $TYPE == "ORIFQ" ]]
 	then
-		NR1=`find * | grep $i | grep -cP "_1\.f.*q\.gz|R1\.f.*q\.gz|_R1_.*\.f.*q\.gz"`
-		NR2=`find * | grep $i | grep -cP "_2\.f.*q\.gz|R2\.f.*q\.gz|_R2_.*\.f.*q\.gz"`
+		ORIFQS=`grep -wF $i ../$SERIES.parsed.tsv | cut -f3 | tr ';' ' ' | xargs basename -a | tr '\n' '|' | sed "s/|$//"`
+		NR1=`find * | grep -P "$ORIFQS" | grep -cP "_1\.f.*q\.gz|R1\.f.*q\.gz|_R1_.*\.f.*q\.gz"`
+		NR2=`find * | grep -P "$ORIFQS" | grep -cP "_2\.f.*q\.gz|R2\.f.*q\.gz|_R2_.*\.f.*q\.gz"`
     if (( $NR1 != $NR2 || $NR1 == 0 || $NR2 == 0 )) 
     then 
-      >&2 echo "ERROR: Run $i (type $TYPE) has $NR1 R1 files and $NR2 R2 files, which should not happen. Exiting.." 
-      exit 1
+      >&2 echo "WARNING: Run $i (type $TYPE) has $NR1 R1 files and $NR2 R2 files, which should not happen. Please investigate.."
     fi
 	fi
 done 
