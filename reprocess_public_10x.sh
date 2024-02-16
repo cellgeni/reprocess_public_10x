@@ -39,7 +39,7 @@ fi
 if [[ $SUBSET != "" ]]
 then 
   >&2 echo "WARNING: Using file $SUBSET to only process select samples!"
-  SUBSET=`realpath $SUBSET`
+  SUBSET=`readlink -f $SUBSET`
   if [[ `grep "^GSM" $SUBSET` == "" && `grep "^SRS" $SUBSET` == "" && `grep "^ERS" $SUBSET` == "" ]]
   then
     >&2 echo "ERROR: The subset file $SUBSET can only contain GSM, SRS, or ERS IDs!"
@@ -47,7 +47,7 @@ then
   fi 
 fi 
 
-SDIR=`realpath $0`
+SDIR=`readlink -f $0`
 SDIR=`dirname $SDIR`
 cd $SERIES
 cp $SDIR/scripts/* .

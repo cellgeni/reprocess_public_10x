@@ -4,22 +4,24 @@
 
 PARSED=$1
 SRA=`grep -w "SRA$" $PARSED | cut -f1 | head -$LSB_JOBINDEX | tail -1` 
+SIF="/nfs/cellgeni/singularity/images/reprocess_10x.sif"
+CMD="singularity run --bind /nfs,/lustre $SIF"
 WL=/nfs/cellgeni/STAR/whitelists
 CPUS=16 
 
 ## fasterq-dump with extra settings tailored to our Farm environment 
 
-parallel-fastq-dump -t $CPUS -T . --split-files -F -s $SRA
+$CMD parallel-fastq-dump -t $CPUS -T . --split-files -F -s $SRA
 
 ## then, find which reads contain actual 10X whitelist
 
 BC=""
 for i in ${SRA}*fastq
 do
-  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-14 | grep -F -f $WL/737K-april-2014_rc.txt | wc -l > $i.v1.count &
-  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-16 | grep -F -f $WL/737K-august-2016.txt   | wc -l > $i.v2.count &
-  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-16 | grep -F -f $WL/3M-february-2018.txt   | wc -l > $i.v3.count &
-  seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-16 | grep -F -f $WL/737K-arc-v1.txt        | wc -l > $i.arc.count &
+  $CMD seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-14 | grep -F -f $WL/737K-april-2014_rc.txt | wc -l > $i.v1.count &
+  $CMD seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-16 | grep -F -f $WL/737K-august-2016.txt   | wc -l > $i.v2.count &
+  $CMD seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-16 | grep -F -f $WL/3M-february-2018.txt   | wc -l > $i.v3.count &
+  $CMD seqtk sample -s100 $i 200000 | awk 'NR%4==2' | cut -c-16 | grep -F -f $WL/737K-arc-v1.txt        | wc -l > $i.arc.count &
 done 
 
 wait
@@ -76,12 +78,14 @@ then
   mv $SRA.tmp1 ${SRA}_1.fastq
   mv $SRA.tmp2 ${SRA}_2.fastq
   
-  pigz -p $CPUS ${SRA}_1.fastq
-  pigz -p $CPUS ${SRA}_2.fastq
+  $CMD pigz ${SRA}_1.fastq &
+  $CMD pigz ${SRA}_2.fastq &
 else
 	## if things look weird, just compress everything, we'll sort it later
   for i in ${SRA}*fastq
   do
-    pigz -p $CPUS $i 
+    $CMD pigz $i &
   done
 fi 
+
+wait

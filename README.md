@@ -32,7 +32,7 @@ Here's a brief description of what happens under the hood:
   - At this point, we parse the metadata tables and calculate the relationships between the samples (GSM/SRS/ERS) and runs (SRR/ERR); 
   - We then download the raw files using Farm's `transfer` queue. The process is followed by a "cleanup" and repeated until all files have been downloaded successfully; 
   - If the reads are available as paired-end fastq files, we assume they have been decoded correctly (i.e. read ending with **1.fastq.gz** is barcode + UMI, and **2.fastq.gz** is the "biological" read). No further processing is required; 
-  - If the reads are only available as SRA archives, or have been decoded to single-end fastq files, we run `fastq-dump` on the archive, after which we identify the biological and barcode reads, and rename them accordingly. After this, the reads are gzipped. This is done using the `normal` queue with 16 CPUs and 64 Gb RAM; 
+  - If the reads are only available as SRA archives, or have been decoded to single-end fastq files, we run [parallel-fastq-dump](https://github.com/rvalieris/parallel-fastq-dump) on the archive, after which we identify the biological and barcode reads, and rename them accordingly. After this, the reads are gzipped. This is done using the `normal` queue with 16 CPUs and 64 Gb RAM; 
   - If the reads are only available as 10x BAM files, we decode them to fastq files using 10x's version of `bamtofastq`. This is also done on the `normal` queue with 16 CPUs and 64 Gb RAM; 
   - After everything is successfully decoded, we group the reads according to the sample-to-run relationship file generated earlier (named `<series_ID>.sample_x_run.tsv`). All reads are placed into `/fastqs` subdirectory;
   - Following this, we run our wonderful [STARsolo](https://github.com/cellgeni/STARsolo/) script that automatically determines 10x chemistry, the name of your first pet, and security question to your bank account. This is also done - *you've guessed it!* - using the `normal` queue with 16 CPUs and 64 Gb RAM! 
@@ -45,6 +45,24 @@ All `bsub` jobs are submitted using job arrays with your series ID + job type (t
 ## But why is this so complex?!! 
 
 Unfortunately, GEO routinely butchers 10x read data, probably with some help from less experienced submitters. The reads are encoded in the *abhorrent* SRA format, and exact specifications change quite dramatically between different experiments. The process above took many months of trial and error to perfect, and was made as simple as possible, but not simpler (c). 
+
+## Docker and used tool versions
+
+Most executables used by the scripts are packaged into a Singularity container. You can make it on your own, using the `Dockerfile` available in this repo. To do this, go to a machine with Docker installed, and run in the same directory as the Dockerfile: 
+
+```
+docker build -t local/my_container:latest .
+sudo singularity build reprocess_10x.sif docker-daemon://local/my_container:latest
+```
+Here are the tools and their versions that are used currently: 
+| Tool | Version |
+|:-:|:-:|
+| STAR | 2.7.10a_alpha_220818 |
+| samtools | 1.15.1 | 
+| seqtk | 1.4 | 
+| SRA-tools | 3.0.10 | 
+| bamtofastq | 1.4.1 | 
+| parallel-fastq-dump | 0.6.7 | 
 
 ## Your fancy script generated an error!
 

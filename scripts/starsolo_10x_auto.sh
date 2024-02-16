@@ -4,7 +4,7 @@
 ## newest version of the script uses STAR v2.7.10a with EM multimapper processing 
 ## in STARsolo which on by default; the extra matrix can be found in /raw subdir 
 
-SIF="/nfs/cellgeni/singularity/images/starsolo_2-7-10a-alpha-220818_samtools_1-15-1_seqtk-1-13_bbmap_38-97_RSEM-1-3-3.sif"
+SIF="/nfs/cellgeni/singularity/images/reprocess_10x.sif"
 CMD="singularity run --bind /nfs,/lustre $SIF"
 
 FQDIR=$1
@@ -273,8 +273,8 @@ then
 fi
 
 ## max-CR bzip all unmapped reads with multicore pbzip2 
-pbzip2 -9 Unmapped.out.mate1 &
-pbzip2 -9 Unmapped.out.mate2 &
+$CMD pbzip2 -9 Unmapped.out.mate1 &
+$CMD pbzip2 -9 Unmapped.out.mate2 &
 wait
 
 ## remove test files 
