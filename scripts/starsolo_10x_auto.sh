@@ -37,7 +37,7 @@ fi
 
 FQDIR=`readlink -f $FQDIR`
 CPUS=16                                                                ## typically bsub this into normal queue with 16 cores and 64 Gb RAM.   
-REF=/nfs/cellgeni/STAR/human/2020A/index                               ## choose the appropriate reference 
+REF=/nfs/cellgeni/STAR/$SHORTSP/2020A/index                               ## choose the appropriate reference 
 WL=/nfs/cellgeni/STAR/whitelists                                       ## directory with all barcode whitelists
 
 ## choose one of the two otions, depending on whether you need a BAM file 
