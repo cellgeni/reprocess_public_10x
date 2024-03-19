@@ -6,7 +6,7 @@ SCRIPT=$2
 
 GROUP=`bugroup -w | grep "\b${USER}\b" | cut -d" " -f1`
 CPUS=16
-RAM=64000 
+RAM=4000 
 QUE="normal"
 WDIR=`pwd`
 N=`grep -w "BAM$" $SERIES.parsed.tsv | wc -l`

@@ -7,7 +7,7 @@ URLS=$3
 
 GROUP=`bugroup -w | grep "\b${USER}\b" | cut -d" " -f1`
 CPUS=1
-RAM=8000 
+RAM=100 
 QUE="transfer"
 N=`cat $URLS | wc -l`
 WDIR=`pwd`

@@ -7,7 +7,7 @@ FQDIR=$3
 
 GROUP=`bugroup -w | grep "\b${USER}\b" | cut -d" " -f1`
 CPUS=16
-RAM=64000 
+RAM=128000 
 QUE="normal"
 WDIR=`pwd`
 N=`cat $SERIES.sample.list | wc -l`
