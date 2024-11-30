@@ -4,8 +4,7 @@ SERIES=$1 ## GSE123456 - need this for properly formatted job names only
 SCRIPT=$2  
 URLS=$3
 
-
-GROUP=`bugroup -w | grep "\b${USER}\b" | cut -d" " -f1`
+GROUP=`id -gn`
 CPUS=1
 RAM=100 
 QUE="transfer"

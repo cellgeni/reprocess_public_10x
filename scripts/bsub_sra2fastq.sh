@@ -3,8 +3,7 @@
 SERIES=$1 ## GSE123456 
 SCRIPT=$2  
 
-
-GROUP=`bugroup -w | grep "\b${USER}\b" | cut -d" " -f1`
+GROUP=`id -gn`
 CPUS=16
 RAM=128000 
 QUE="normal"
