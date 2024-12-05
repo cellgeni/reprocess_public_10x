@@ -15,7 +15,7 @@ fi
 
 if [[ ! -s $SERIES.urls.list ]]
 then 
-  echo "ERROR: File $SERIES.ulrs.list does not exist or is empty; this is too Zen for me to download!"
+  echo "ERROR: File $SERIES.urls.list does not exist or is empty; this is too Zen for me to download!"
   exit 1
 fi
 
