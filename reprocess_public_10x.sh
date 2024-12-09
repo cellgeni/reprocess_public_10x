@@ -55,6 +55,14 @@ cp $SDIR/scripts/* .
 ## after all scripts are copied and directories are checked, collect all metadata
 ./collect_metadata.sh $SERIES $SUBSET
 
+if [[ -s $SERIES.ena.tsv && -s $SERIES.accessions.tsv && -s $SERIES.parsed.tsv ]]
+then
+  >&2 echo "All necessary metadata files collected, continuing .." 
+else 
+  >&2 echo "ERROR: Missing key metadata files - please check $SERIES.ena.tsv, $SERIES.accessions.tsv, and $SERIES.parsed.tsv! Exiting .." 
+  exit 1
+fi
+
 >&2 echo; >&2 echo "=============================== STEP 2: DOWNLOAD ALL THE RELEVANT FILES =================================="; >&2 echo
 
 ## download all the necessary raw files using 'transfer' queue on Farm. Did we tell you this whole thing is Sanger-specific?  
