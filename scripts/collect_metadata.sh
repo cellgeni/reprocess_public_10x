@@ -3,6 +3,8 @@
 SERIES=$1
 SUBSET=$2
 
+META=$SERIES.ena.tsv
+
 ## this would get increasingly complicated when we support more databases 
 ## for now its 3 main ones: GEO, ArrayExpress, and naked SRA/ENA project ID
 ## got rid of ffq in this version, this works faster and more to the point (but is more ENA-dependent)
@@ -53,7 +55,7 @@ then
   TRIES=1
   until (( $RET == 0 )) 
   do
-    ./curl_ena_metadata.sh $SERIES.project.list > $SERIES.ena.tsv 
+    ./curl_ena_metadata.sh $SERIES
     RET=$?
 
     ## this either pulls sub-series data (and replaces $SERIES.project.list with useful PRJNA* IDs), or just quits after 5 tries
@@ -82,7 +84,7 @@ then
         TRIES=1
         until (( $RET == 0 ))
         do
-          ./curl_ena_metadata.sh $SERIES.project.list > $SERIES.ena.tsv
+          ./curl_ena_metadata.sh $SERIES
           RET=$?
           TRIES=$((TRIES+1))
           if (( $TRIES > 5 ))
@@ -96,19 +98,26 @@ then
     sleep 1
   done
 
+  # Checking which metadata file was loaded
+  if [[ -s $SERIES.sra.tsv ]]
+  then
+    META="$SERIES.sra.tsv"
+  fi
+
   ## make an accession table. If you adjust the ENA curl query, column numbers will change, so beware
   if [[ -s $SERIES.accessions.tsv ]] 
   then 
     >&2 echo "WARNING: file $SERIES.accessions.tsv exists. This shouldn't normally happen. Overwriting the file by parsing $SERIES.ena.tsv.."
     rm $SERIES.accessions.tsv
-  fi 
+  fi
+  
 
   for i in `cat $SERIES.sample.list`
   do
 		## changed this because ENA web API is inconsistent with column order..
-    SMPS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    EXPS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    SMPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    EXPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+    RUNS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
     echo -e "$i\t$SMPS\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
   done
 
@@ -135,7 +144,7 @@ then
   until (( $RET == 0 )) 
   do
     ## for ArrayExpress, we query by sample ID because sdrf doesn't list the BioProject ID
-    ./curl_ena_metadata.sh $SERIES.sample.list > $SERIES.ena.tsv 
+    ./curl_ena_metadata.sh $SERIES
     RET=$?
     TRIES=$((TRIES+1))
     if (( $TRIES > 5 )) 
@@ -173,7 +182,7 @@ then
   TRIES=1
   until (( $RET == 0 )) 
   do
-    ./curl_ena_metadata.sh $SERIES.project.list > $SERIES.ena.tsv 
+    ./curl_ena_metadata.sh $SERIES
     RET=$?
     TRIES=$((TRIES+1))
     if (( $TRIES > 5 )) 
@@ -235,4 +244,9 @@ fi
 ## finally, classify each run into 3 major types: 
 ## 1) we have useable 10x paired-end files; 2) we need to get them from 10x BAM; 3) we need to get them from SRA
 ## simultaneously, '$SERIES.urls.list' is generated listing all things that need to be downloaded 
-./parse_ena_metadata.sh $SERIES > $SERIES.parsed.tsv
+if [[ $META == "$SERIES.ena.tsv" ]]
+then
+  ./parse_ena_metadata.sh $SERIES > $SERIES.parsed.tsv
+else
+  ./parse_sra_metadata.sh $SERIES > $SERIES.parsed.tsv
+fi
