@@ -55,7 +55,7 @@ cp $SDIR/scripts/* .
 ## after all scripts are copied and directories are checked, collect all metadata
 ./collect_metadata.sh $SERIES $SUBSET
 
-if [[ -s $SERIES.ena.tsv && -s $SERIES.accessions.tsv && -s $SERIES.parsed.tsv ]]
+if [[ -s $SERIES.sra.tsv || -s $SERIES.ena.tsv && -s $SERIES.accessions.tsv && -s $SERIES.parsed.tsv ]]
 then
   >&2 echo "All necessary metadata files collected, continuing .." 
 else 
