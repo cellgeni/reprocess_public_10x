@@ -13,10 +13,18 @@ do
   TYPE="SRA"  ## we always default to SRA. This could cause problems for very fresh datasets. 
   LOC=""
 
-  SPECIES=`grep -w $i $SERIES.sra.tsv | cut -f29`
-  SRA=`grep -w $i $SERIES.sra.tsv | cut -f10` 
+  SPECIES=`grep -w $i $SERIES.sra.tsv | cut -f8 | tr -d '\r'`
+  BAM=`grep -w $i $SERIES.sra.tsv | cut -f17 | tr -d '\r'` 
+  SRA=`grep -w $i $SERIES.sra.tsv | cut -f11 | tr -d '\r'` 
   
-  if [[ $SRA != "" ]]
+
+  if [[ $BAM != "" ]]
+  then 
+    LOC=$BAM
+    TYPE="BAM"
+    echo $BAM >> $SERIES.urls.list
+    >&2 echo "Sample $i is available via SRA as an BAM: $LOC"
+  elif [[ $SRA != "" ]]
   then 
     LOC=$SRA
     echo $SRA >> $SERIES.urls.list
