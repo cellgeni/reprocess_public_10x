@@ -226,8 +226,8 @@ then
   >&2 cat $SUBSET 
   grep -f $SUBSET $SERIES.sample.list > $SERIES.sample.list.tmp
   mv $SERIES.sample.list.tmp $SERIES.sample.list
-  grep -f $SUBSET $SERIES.ena.tsv > $SERIES.ena.tsv.tmp 
-  mv $SERIES.ena.tsv.tmp $SERIES.ena.tsv 
+  grep -f $SUBSET $META > $META.tmp 
+  mv $META.tmp $META
   grep -f $SUBSET $SERIES.accessions.tsv > $SERIES.accessions.tsv.tmp 
   mv $SERIES.accessions.tsv.tmp $SERIES.accessions.tsv
 
