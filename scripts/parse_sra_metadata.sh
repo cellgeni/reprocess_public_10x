@@ -15,7 +15,8 @@ do
 
   SPECIES=`grep -w $i $SERIES.sra.tsv | cut -f8 | tr -d '\r'`
   BAM=`grep -w $i $SERIES.sra.tsv | cut -f17 | tr -d '\r'` 
-  SRA=`grep -w $i $SERIES.sra.tsv | cut -f11 | tr -d '\r'` 
+  SRA_LITE=`grep -w $i $SERIES.sra.tsv | cut -f11 | tr -d '\r'`
+  SRA_NORM=`grep -w $i $SERIES.sra.tsv | cut -f14 | tr -d '\r'`  
   
 
   if [[ $BAM != "" ]]
@@ -24,15 +25,20 @@ do
     TYPE="BAM"
     echo $BAM >> $SERIES.urls.list
     >&2 echo "Sample $i is available via SRA as an BAM: $LOC"
-  elif [[ $SRA != "" ]]
+  elif [[ $SRA_LITE != "" ]]
   then 
-    LOC=$SRA
-    echo $SRA >> $SERIES.urls.list
+    LOC=$SRA_LITE
+    echo $SRA_LITE >> $SERIES.urls.list
+    >&2 echo "Sample $i is available via SRA as an SRA archive: $LOC"
+  elif [[ $SRA_NORM != "" ]]
+  then 
+    LOC=$SRA_NORM
+    echo $SRA_NORM >> $SERIES.urls.list
     >&2 echo "Sample $i is available via SRA as an SRA archive: $LOC"
   else
     SRA=`srapath $i`
     LOC=$SRA
-    >&2 echo "WARNING: No ENA ftp URL found for sample $i, using 'srapath' to get the (open) Amazon link to SRA archive.."
+    >&2 echo "WARNING: No URL found for sample $i, using 'srapath' to get the (open) Amazon link to SRA archive.."
     echo $SRA >> $SERIES.urls.list
     >&2 echo "Sample $i is available via NCBI/Amazon as an SRA archive: $LOC"
   fi

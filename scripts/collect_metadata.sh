@@ -99,7 +99,7 @@ then
   done
 
   # Checking which metadata file was loaded
-  if [[ ! -s $SERIES.ena.tsv || $(cut -f17 $SERIES.sra.tsv) ]]
+  if [[ ! -s $SERIES.ena.tsv || $(cut -f 17 $SERIES.sra.tsv | tr -d '\n' | tr -d '\r') ]]
   then
     META="$SERIES.sra.tsv"
   fi
