@@ -189,12 +189,13 @@ def main() -> None:
     with open(args.output, mode="w", newline='') as csv_file:
         # create writer object
         writer = csv.DictWriter(
-            csv_file, fieldnames=run_meta_list[0].keys(), delimiter=args.sep
+            csv_file, fieldnames=KEYS, delimiter=args.sep
         )
 
         # write the data
         for run_meta in run_meta_list:
-            writer.writerow(run_meta)
+            meta_to_write = {key:run_meta.get(key, None) for key in KEYS}
+            writer.writerow(meta_to_write)
 
 
 if __name__ == "__main__":
