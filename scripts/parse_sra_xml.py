@@ -114,13 +114,15 @@ def parse_references(run: minidom.Element) -> Dict[str, str]:
     # create dict for meta
     reference_meta = dict()
     # get pool and experiment objects
-    pool_member = run.getElementsByTagName("Pool")[0].getElementsByTagName("Member")[0]
+    pool_member = run.getElementsByTagName("Pool")
     experiment = run.getElementsByTagName("EXPERIMENT_REF")[0]
     # write to dict
     reference_meta["experiment"] = experiment.getAttribute("accession")
-    reference_meta["sample"] = pool_member.getAttribute("accession")
-    reference_meta["geo_sample"] = pool_member.getAttribute("sample_name")
-    reference_meta["organism"] = pool_member.getAttribute("organism")
+    if pool_member:
+        pool_member= pool_member[0].getElementsByTagName("Member")[0]
+        reference_meta["sample"] = pool_member.getAttribute("accession")
+        reference_meta["geo_sample"] = pool_member.getAttribute("sample_name")
+        reference_meta["organism"] = pool_member.getAttribute("organism")
     return reference_meta
 
 
@@ -168,6 +170,7 @@ def parse_run_meta(run: minidom.Element) -> Dict[str, str]:
     # write metadata to dict
     run_meta.update(parse_run(run))
     run_meta.update(parse_id(run))
+    print(run_meta["accession"])
     run_meta.update(parse_references(run))
     run_meta.update(parse_files(run))
     return run_meta
@@ -186,15 +189,13 @@ def main() -> None:
     run_meta_list = [parse_run_meta(run) for run in group.getElementsByTagName("RUN")]
 
     # write to tsv file
-    with open(args.output, mode="w", newline='') as csv_file:
+    with open(args.output, mode="w", newline="") as csv_file:
         # create writer object
-        writer = csv.DictWriter(
-            csv_file, fieldnames=KEYS, delimiter=args.sep
-        )
+        writer = csv.DictWriter(csv_file, fieldnames=KEYS, delimiter=args.sep)
 
         # write the data
         for run_meta in run_meta_list:
-            meta_to_write = {key:run_meta.get(key, None) for key in KEYS}
+            meta_to_write = {key: run_meta.get(key, None) for key in KEYS}
             writer.writerow(meta_to_write)
 
 
