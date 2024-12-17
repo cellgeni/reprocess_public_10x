@@ -16,7 +16,8 @@ do
   SPECIES=`grep -w $i $SERIES.sra.tsv | cut -f8 | tr -d '\r'`
   BAM=`grep -w $i $SERIES.sra.tsv | cut -f17 | tr -d '\r'` 
   SRA_LITE=`grep -w $i $SERIES.sra.tsv | cut -f11 | tr -d '\r'`
-  SRA_NORM=`grep -w $i $SERIES.sra.tsv | cut -f14 | tr -d '\r'`  
+  SRA_NORM=`grep -w $i $SERIES.sra.tsv | cut -f14 | tr -d '\r'`
+  FASTQ=`grep -w $i $SERIES.ena.tsv | cut -f20 | grep "_1\.fastq.gz" | grep "_2\.fastq.gz"`
   
 
   if [[ $BAM != "" ]]
@@ -25,6 +26,11 @@ do
     TYPE="BAM"
     echo $BAM >> $SERIES.urls.list
     >&2 echo "Sample $i is available via SRA as an BAM: $LOC"
+  elif [[ $FASTQ != "" ]]
+  then 
+    LOC=$FASTQ
+    echo $FASTQ | tr ',' '\n' >> $SERIES.urls.list
+    >&2 echo "Sample $i is available via SRA as an FASTQ: $LOC"
   elif [[ $SRA_LITE != "" ]]
   then 
     LOC=$SRA_LITE

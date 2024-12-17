@@ -24,6 +24,9 @@ KEYS = [
     "bam_filename",
     "bam_available",
     "bam_url",
+    "fastq_filename",
+    "fastq_available",
+    "fastq_url",
 ]
 
 
@@ -146,13 +149,18 @@ def parse_files(run: minidom.Element) -> Dict[str, str]:
     for file in files:
         name = file.getAttribute("semantic_name")
         alternatives = file.getElementsByTagName("Alternatives")
-        file_meta[f"{edit(name)}_filename"] = file.getAttribute("filename")
-        file_meta[f"{edit(name)}_url"] = file.getAttribute("url")
+        # find meta
+        filename = file.getAttribute("filename")
+        available = "not available"
+        url = None
         for alternative in alternatives:
-            if alternative.getAttribute("url") == file_meta[f"{edit(name)}_url"]:
-                file_meta[f"{edit(name)}_available"] = alternative.getAttribute(
-                    "free_egress"
-                )
+            if alternative.getAttribute("free_egress").lower() == "worldwide":
+                available = alternative.getAttribute("free_egress").lower()
+                url = alternative.getAttribute("url")
+        # write meta
+        file_meta[f"{edit(name)}_filename"] = filename
+        file_meta[f"{edit(name)}_available"] = available
+        file_meta[f"{edit(name)}_url"] = file_meta[f"{edit(name)}_url"] + ',' + url if file_meta.get(f"{edit(name)}_url") else url
     return file_meta
 
 
@@ -170,7 +178,6 @@ def parse_run_meta(run: minidom.Element) -> Dict[str, str]:
     # write metadata to dict
     run_meta.update(parse_run(run))
     run_meta.update(parse_id(run))
-    print(run_meta["accession"])
     run_meta.update(parse_references(run))
     run_meta.update(parse_files(run))
     return run_meta
