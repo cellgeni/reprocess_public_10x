@@ -15,8 +15,21 @@ do
 
   SPECIES=`grep -w $i $SERIES.sra.tsv | cut -f29`
   SRA=`grep -w $i $SERIES.sra.tsv | cut -f10` 
-  
-  if [[ $SRA != "" ]]
+  SRABAM=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
+          .result[].files[] | 
+          select(.name | contains("bam")) | 
+          .locations[] | 
+          select((.rehydrationRequired // false) == false and (.payRequired // false) == false) | 
+          .link
+        '`
+
+  if [[ $SRABAM != "" ]]
+  then
+    TYPE="BAM"
+    LOC=$SRABAM
+    echo $SRABAM >> $SERIES.urls.list
+    >&2 echo "Sample $i is available via SRA as an original submitter's BAM file: $LOC"
+  elif [[ $SRA != "" ]]
   then 
     LOC=$SRA
     echo $SRA >> $SERIES.urls.list
