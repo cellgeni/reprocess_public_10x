@@ -50,13 +50,20 @@ then
     >&2 echo "WARNING: No secondary run/experiment (SRP/SRX) IDs in the family.soft file; this often happens in datasets that are restricted access (dbGap, etc)."
   fi
 
-  ## curl info about each run (SRR/ERR/DRR) from ENA API; v2 pulls GSM data etc 
+  ## curl info about each run (SRR/ERR/DRR) from ENA and SRA APIs; v2 pulls GSM data etc 
   RET=1
+  RET_SRA=1
   TRIES=1
-  until (( $RET == 0 )) 
+  until (( $RET == 0)) 
   do
-    ./curl_ena_metadata.sh $SERIES
+    ./curl_ena_metadata.sh $SERIES.project.list > $SERIES.ena.tsv 
     RET=$?
+
+    if [[ $RET_SRA -eq 1 ]]
+    then
+      ./curl_sra_metadata.sh $SERIES
+      RET_SRA=$?
+    fi
 
     ## this either pulls sub-series data (and replaces $SERIES.project.list with useful PRJNA* IDs), or just quits after 5 tries
     TRIES=$((TRIES+1))
@@ -64,10 +71,9 @@ then
     then
       >&2 echo "WARNING: No ENA records can be retrieved for GEO projects listed in $SERIES.project.list!"
       if [[ $SUBGSE == "" ]]
-      then 
+      then
         >&2 echo "ERROR: No GSE subseries were listed in ${SERIES}_family.soft - no alternative PRJNA* to be found, and no ENA entries can be retrieved!"
-        exit 1
-      else 
+      else
         >&2 echo "WARNING: replacing $SERIES.project.list with sub-series projects.."
         rm $SERIES.project.list 
         for i in $SUBGSE
@@ -84,22 +90,31 @@ then
         TRIES=1
         until (( $RET == 0 ))
         do
-          ./curl_ena_metadata.sh $SERIES
+          ./curl_ena_metadata.sh $SERIES.project.list > $SERIES.ena.tsv
           RET=$?
           TRIES=$((TRIES+1))
           if (( $TRIES > 5 ))
           then
-            >&2 echo "ERROR: Still no ENA records can be retrieved for the GEO SUBSERIES projects listed in $SERIES.project.list, I quit!"
-            exit 1
+            >&2 echo "ERROR: Still no ENA records can be retrieved for the GEO SUBSERIES projects listed in $SERIES.project.list!"
           fi
         done
+      fi
+
+      ## ena metadata loading failed, now check if sra was loaded
+      if [[ $RET_SRA -eq 1 ]]
+      then
+        >&2 echo "ERROR: No SRA records can be retrieved for the $SERIES, I quit!"
+        exit 1
+      else
+        META="$SERIES.sra.tsv"
+        RET=0
       fi
     fi 
     sleep 1
   done
 
-  # Checking which metadata file was loaded
-  if [[ ! -s $SERIES.ena.tsv || $(cut -f 17 $SERIES.sra.tsv | tr -d '\n' | tr -d '\r') ]]
+  # checking if ENA metadata file is empty
+  if [[ ! -s $SERIES.ena.tsv ]]
   then
     META="$SERIES.sra.tsv"
   fi
@@ -144,7 +159,7 @@ then
   until (( $RET == 0 )) 
   do
     ## for ArrayExpress, we query by sample ID because sdrf doesn't list the BioProject ID
-    ./curl_ena_metadata.sh $SERIES
+    ./curl_ena_metadata.sh $SERIES.sample.list > $SERIES.ena.tsv
     RET=$?
     TRIES=$((TRIES+1))
     if (( $TRIES > 5 )) 
@@ -182,7 +197,7 @@ then
   TRIES=1
   until (( $RET == 0 )) 
   do
-    ./curl_ena_metadata.sh $SERIES
+    ./curl_ena_metadata.sh $SERIES.project.list > $SERIES.ena.tsv
     RET=$?
     TRIES=$((TRIES+1))
     if (( $TRIES > 5 )) 
