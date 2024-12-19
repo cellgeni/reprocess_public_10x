@@ -21,8 +21,14 @@ do
   ENAGZ=`grep -w $i $SERIES.ena.tsv | cut -f11 | grep "_1\.fastq.gz" | grep "_2\.fastq.gz"`     ## ENA formatting is strict
   ORIFQ=`grep -w $i $SERIES.ena.tsv | cut -f12 | grep "f.*q"`                                   ## ppl name files *all kinds of random shiz*, really
   ORIBAM=`grep -w $i $SERIES.ena.tsv | cut -f12 | tr ';' '\n' | grep -v "\.bai" | grep "\.bam"` ## don't need the BAM index which is often there
-  SRA=`grep -w $i $SERIES.ena.tsv | cut -f13` 
-  
+  SRA=`grep -w $i $SERIES.ena.tsv | cut -f13`
+  SRABAM=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
+          .result[].files[] | 
+          select(.name | contains("bam")) | 
+          .locations[] | 
+          select((.rehydrationRequired // false) == false and (.payRequired // false) == false) | 
+          .link
+        '`
 
   if [[ $AEGZ != "" ]]
   then
@@ -48,6 +54,12 @@ do
     LOC=$ORIBAM
     echo $ORIBAM >> $SERIES.urls.list
     >&2 echo "Sample $i is available via ENA as an original submitter's BAM file: $LOC"
+  elif [[ $SRABAM != "" ]]
+  then
+    TYPE="BAM"
+    LOC=$SRABAM
+    echo $SRABAM >> $SERIES.urls.list
+    >&2 echo "Sample $i is available via SRA as an original submitter's BAM file: $LOC"
   elif [[ $SRA != "" ]]
   then 
     TYPE="SRA"
