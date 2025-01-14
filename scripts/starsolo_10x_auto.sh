@@ -204,6 +204,7 @@ then
   >&2 echo "WARNING: Read 1 length ($R1LEN) is more than the sum of appropriate barcode and UMI ($BCUMI)."
 fi
 
+
 ## it's hard to come up with a universal rule to correctly infer strand-specificity of the experiment. 
 ## this is the best I could come up with: 1) check if fraction of test reads (200k random ones) maps to GeneFull forward strand 
 ## with higher than 50% probability; 2) if not, run the same quantification with "--soloStand Reverse" and calculate the same stat; 
