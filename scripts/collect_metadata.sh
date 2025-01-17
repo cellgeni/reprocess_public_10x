@@ -91,6 +91,7 @@ function get_subseries_from_family {
   if [[ $SUBGSE == "" ]]
   then
     >&2 echo "ERROR: No GSE subseries were listed in ${SERIES}_family.soft file!"
+    return 1
   else
     for i in $SUBGSE
     do
@@ -100,6 +101,7 @@ function get_subseries_from_family {
       grep Series_relation ${i}_family.soft | perl -ne 'print "$1\n" if (m/(PRJ[A-Z]+\d+)/)' | sort | uniq >> $OUTPUT_FILE
     done
   fi
+  return 1
 }
 
 function download_metadata {
@@ -133,42 +135,6 @@ function download_metadata {
   else
     return $STATUS
   fi
-}
-
-
-function alternative_download_metadata {
-  local SERIES=$1
-  local SCRIPT=$2
-  local OUTPUT_FILE=$3
-  local STATUS=1
-
-  ## try loading SRA metadata using subseries
-  >&2 echo "WARNING: replacing $SERIES.project.list with sub-series projects.."
-  if [[ ! -f $SERIES.subproject.list ]]
-  then
-      get_subseries_from_family "$SERIES" "$SERIES.subproject.list"
-  fi
-
-  ## try loading SRA metadata using subseries
-  if [[ -s $SERIES.subproject.list ]]
-  then
-    download_metadata "$SERIES" "$SCRIPT" "$SERIES.subproject.list" "$OUTPUT_FILE"
-    STATUS=$?
-  fi
-
-  ## try loading SRA using BioSample identifiers
-  if [ $STATUS -eq 1 ]
-  then
-    >&2 echo "WARNING: replacing $SERIES.project.list with BioSample identifiers.."
-    download_metadata "$SERIES" "$SCRIPT" "$SERIES.biosample.list" "$OUTPUT_FILE"
-    STATUS=$?
-  fi
-
-  if [ $STATUS -eq 1 ]
-  then
-    >&2 echo "ERROR: Failed to download metadata for $SERIES using $SCRIPT methods!"
-  fi
-  return $STATUS
 }
 
 function write_accessions() {
@@ -366,27 +332,60 @@ function process_geo() {
   ## parse the family file to get the project and sample IDs
   parse_geo_family $SERIES
 
-  ## download metadata from SRA
-  download_metadata "$SERIES" "./curl_sra_metadata.sh" "$SERIES.project.list" "$SERIES.sra.tsv"
-  local SRA_STATUS=$?
-
-
-  ## if the download failed, try alternative methods
-  if [ $SRA_STATUS -eq 1 ]
+  ## Try loading metadata using $SERIES.project.list
+  if [[ -s $SERIES.project.list ]]
   then
-    alternative_download_metadata $SERIES "./curl_sra_metadata.sh" "$SERIES.sra.tsv"
-    SRA_STATUS=$?
+    ## download metadata from SRA
+    download_metadata "$SERIES" "./curl_sra_metadata.sh" "$SERIES.project.list" "$SERIES.sra.tsv"
+    local SRA_STATUS=$?
+
+    ## download metadata from ENA
+    download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
+    local ENA_STATUS=$?
   fi
 
-  ## download metadata from ENA
-  download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
-  local ENA_STATUS=$? 
 
-  ## if the download failed, try alternative methods
-  if [ $ENA_STATUS -eq 1 ]
+  ## if the download failed, try using suboroject IDs
+  if [ $SRA_STATUS -eq 1 ] || [ $ENA_STATUS -eq 1 ]
   then
-    alternative_download_metadata $SERIES "./curl_ena_metadata.sh" "$SERIES.ena.tsv"
-    ENA_STATUS=$?
+    >&2 echo "WARNING: replacing $SERIES.project.list with sub-series projects.."
+    ## get subseries from family file
+    get_subseries_from_family "$SERIES" "$SERIES.subproject.list"
+
+    ## download metadata from SRA
+    if [ $SRA_STATUS -eq 1 ]
+    then
+      download_metadata "$SERIES" "./curl_sra_metadata.sh" "$SERIES.subproject.list" "$SERIES.sra.tsv"
+      SRA_STATUS=$?
+    fi
+
+    ## download metadata from ENA
+    if [ $ENA_STATUS -eq 1 ]
+    then
+      download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.subproject.list" "$SERIES.ena.tsv"
+      ENA_STATUS=$?
+    fi
+  fi
+
+
+## if the download using subproject IDs failed, try using BioSample IDs
+  if [ $SRA_STATUS -eq 1 ] || [ $ENA_STATUS -eq 1 ]
+  then
+    >&2 echo "WARNING: replacing $SERIES.subproject.list with BioSample IDs.."
+
+    ## download metadata from SRA
+    if [ $SRA_STATUS -eq 1 ]
+    then
+      download_metadata "$SERIES" "./curl_sra_metadata.sh" "$SERIES.biosample.list" "$SERIES.sra.tsv"
+      SRA_STATUS=$?
+    fi
+
+    ## download metadata from ENA
+    if [ $ENA_STATUS -eq 1 ]
+    then
+      download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.biosample.list" "$SERIES.ena.tsv"
+      ENA_STATUS=$?
+    fi
   fi
 
   ## if both downloads failed, exit with an error
