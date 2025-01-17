@@ -1,26 +1,12 @@
 #!/bin/bash 
 
-SERIES=$1
-SUBSET=$2
+set -uo pipefail
 
-META=$SERIES.ena.tsv
+function download_geo_family() {
+  local SERIES=$1
 
-## this would get increasingly complicated when we support more databases 
-## for now its 3 main ones: GEO, ArrayExpress, and naked SRA/ENA project ID
-## got rid of ffq in this version, this works faster and more to the point (but is more ENA-dependent)
-
-if (( $# != 1 && $# != 2 ))
-then
-  >&2 echo "USAGE: ./collect_metadata.sh <series_id> [sample_list]"
-  >&2 echo
-  >&2 echo "(requires curl_ena_metadata.sh and parse_ena_metadata.sh present in the same directory)" 
-  exit 1
-fi
-
-if [[ $SERIES == GSE* ]]
-then
   ## download the so-called soft_family file, and use it to generate same files as above
-  PAD=`echo $SERIES | perl -ne 's/\d{3}$/nnn/; print'`
+  local PAD=`echo $SERIES | perl -ne 's/\d{3}$/nnn/; print'`
   wget -O ${SERIES}_family.soft.gz https://ftp.ncbi.nlm.nih.gov/geo/series/$PAD/$SERIES/soft/${SERIES}_family.soft.gz
   ## -f overwrites the old stuff
   gzip -fd ${SERIES}_family.soft.gz
@@ -29,18 +15,50 @@ then
     >&2 echo "ERROR: Failed to download ${SERIES}_family.soft file; please make sure the series you requested exists, or fix the download URL!"
     exit 1
   fi
+}
 
-  ## samples here are GSM IDs; usually for a 10x GSM==SRS==SRX, but I haven't checked *all* of the SRA you know 
-  grep Sample_geo_accession ${SERIES}_family.soft | awk '{print $3}' | sort | uniq > $SERIES.sample.list
-  grep Series_relation ${SERIES}_family.soft | perl -ne 'print "$1\n" if (m/(PRJ[A-Z]+\d+)/)' | sort | uniq > $SERIES.project.list
- 
+function download_sdrf_idf_files() {
+  local SERIES=$1
+
+  wget -O $SERIES.sdrf.txt https://www.ebi.ac.uk/biostudies/files/$SERIES/$SERIES.sdrf.txt
+  wget -O $SERIES.idf.txt https://www.ebi.ac.uk/biostudies/files/$SERIES/$SERIES.idf.txt
+  
+  if [[ ! -s $SERIES.sdrf.txt ]] 
+  then
+    >&2 echo "ERROR: Failed to download $SERIES.sdrf.txt file; please make sure the series you requested exists, or fix the download URL!"
+    exit 1
+  fi
+}
+
+function parse_geo_family() {
+  local SERIES=$1
+
+  ## get bioproject ID
+  grep Series_relation ${SERIES}_family.soft | perl -ne 'print "$1\n" if (m/(PRJ[A-Z]+\d+)/)' | sort | uniq || echo "" > $SERIES.project.list
+  
+  ## get sample IDs; samples here are GSM IDs; usually for a 10x GSM==SRS==SRX, but I haven't checked *all* of the SRA you know 
+  awk '
+	BEGIN {OFS="\t"}
+	# get all IDs
+  /\^SAMPLE/ { sample=gensub(/.*(GSM[0-9]+)/, "\\1", "g", $0) }
+  /Sample_geo_accession/ { geo=gensub(/.*(GSM[0-9]+)/, "\\1", "g", $0) }
+  /Sample_relation = SRA:/ { sra=gensub(/.*(SRX[0-9]+)/, "\\1", "g", $0) }
+  /Sample_relation = BioSample:/ { biosample=gensub(/.*(SAMN[0-9]+)/, "\\1", "g", $0) }
+  
+  # When all three pieces of information are found, print them as a tab-separated line
+  /BioSample:/ && sample && geo && sra && biosample {
+    print sample,geo,sra,biosample
+    sample="";  geo=""; sra=""; biosample=""
+  }
+  ' ${SERIES}_family.soft > $SERIES.sample.relation.list
+  cut -f 2 ${SERIES}.sample.relation.list > $SERIES.sample.list
+  cut -f 4 ${SERIES}.sample.relation.list > $SERIES.biosample.list
+
   ## first variable is used to spot dbGap and other problematic datasets;
-  ## second variable is used to find SubSeries when SuperSeries does not produce any meaningful ENA links
-  EXPIDS=`grep Series_relation ${SERIES}_family.soft | grep -v PRJ | wc -l`
-  SUBGSE=`grep Series_relation ${SERIES}_family.soft | grep SuperSeries | perl -ne 'print "$1\n" if (m/(GSE\d+)/)'` 
+  local EXPIDS=`grep Series_relation ${SERIES}_family.soft | grep -v PRJ | wc -l` 
   
   ## few sanity checks:
-  if [[ `cat $SERIES.project.list | wc -l` != "1" ]]
+  if [[ `cat $SERIES.project.list | wc -l` -gt 1 ]]
   then 
     >&2 echo "WARNING: more than 1 project associated with series $SERIES! This shouldn't normally happen, do take a look."
   fi 
@@ -49,219 +67,408 @@ then
   then
     >&2 echo "WARNING: No secondary run/experiment (SRP/SRX) IDs in the family.soft file; this often happens in datasets that are restricted access (dbGap, etc)."
   fi
+}
 
-  ## curl info about each run (SRR/ERR/DRR) from ENA and SRA APIs; v2 pulls GSM data etc 
-  RET=1
-  RET_SRA=1
-  TRIES=1
-  until (( $RET == 0)) 
-  do
-    ./curl_ena_metadata.sh $SERIES.project.list > $SERIES.ena.tsv 
-    RET=$?
-
-    if [[ $RET_SRA -eq 1 ]]
-    then
-      ./curl_sra_metadata.sh $SERIES
-      RET_SRA=$?
-    fi
-
-    ## this either pulls sub-series data (and replaces $SERIES.project.list with useful PRJNA* IDs), or just quits after 5 tries
-    TRIES=$((TRIES+1))
-    if (( $TRIES > 5 )) 
-    then
-      >&2 echo "WARNING: No ENA records can be retrieved for GEO projects listed in $SERIES.project.list!"
-      if [[ $SUBGSE == "" ]]
-      then
-        >&2 echo "ERROR: No GSE subseries were listed in ${SERIES}_family.soft - no alternative PRJNA* to be found, and no ENA entries can be retrieved!"
-      else
-        >&2 echo "WARNING: replacing $SERIES.project.list with sub-series projects.."
-        rm $SERIES.project.list 
-        for i in $SUBGSE
-        do
-          PAD=`echo $i | perl -ne 's/\d{3}$/nnn/; print'`
-          wget -O ${i}_family.soft.gz https://ftp.ncbi.nlm.nih.gov/geo/series/$PAD/$i/soft/${i}_family.soft.gz
-          gzip -fd ${i}_family.soft.gz
-          grep Series_relation ${i}_family.soft | perl -ne 'print "$1\n" if (m/(PRJ[A-Z]+\d+)/)' | sort | uniq >> $SERIES.project.list
-        done
-           
-        ## now, once we re-populated $SERIES.project.list, let's try to get ENA records for the new IDs.. 
-        >&2 echo "WARNING: pulling ENA records using sub-series project identifiers.."
-        RET=1
-        TRIES=1
-        until (( $RET == 0 ))
-        do
-          ./curl_ena_metadata.sh $SERIES.project.list > $SERIES.ena.tsv
-          RET=$?
-          TRIES=$((TRIES+1))
-          if (( $TRIES > 5 ))
-          then
-            >&2 echo "ERROR: Still no ENA records can be retrieved for the GEO SUBSERIES projects listed in $SERIES.project.list!"
-          fi
-        done
-      fi
-
-      ## ena metadata loading failed, now check if sra was loaded
-      if [[ $RET_SRA -eq 1 ]]
-      then
-        >&2 echo "ERROR: No SRA records can be retrieved for the $SERIES, I quit!"
-        exit 1
-      else
-        META="$SERIES.sra.tsv"
-        RET=0
-      fi
-    fi 
-    sleep 1
-  done
-
-  # checking if ENA metadata file is empty
-  if [[ ! -s $SERIES.ena.tsv ]]
-  then
-    META="$SERIES.sra.tsv"
-  fi
-
-  ## make an accession table. If you adjust the ENA curl query, column numbers will change, so beware
-  if [[ -s $SERIES.accessions.tsv ]] 
-  then 
-    >&2 echo "WARNING: file $SERIES.accessions.tsv exists. This shouldn't normally happen. Overwriting the file by parsing $SERIES.ena.tsv.."
-    rm $SERIES.accessions.tsv
-  fi
-  
-
-  for i in `cat $SERIES.sample.list`
-  do
-		## changed this because ENA web API is inconsistent with column order..
-    SMPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    EXPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    echo -e "$i\t$SMPS\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
-  done
-
-  ## make few more useful metadata files
-  cut -f 4 $SERIES.accessions.tsv | tr ',' '\n' | sort | uniq > $SERIES.run.list                               
-  cut -f 1,4 $SERIES.accessions.tsv > $SERIES.sample_x_run.tsv
-elif [[ $SERIES == E-MTAB* ]]
-then
-  ## sdrf's are wonderful, but don't have the project ID, which is *annoying*. That's OK though, we'll go by SRS. 
-  wget -O $SERIES.sdrf.txt https://www.ebi.ac.uk/biostudies/files/$SERIES/$SERIES.sdrf.txt
-  wget -O $SERIES.idf.txt https://www.ebi.ac.uk/biostudies/files/$SERIES/$SERIES.idf.txt
-  if [[ ! -s $SERIES.sdrf.txt ]] 
-  then
-    >&2 echo "ERROR: Failed to download $SERIES.sdrf.txt file; please make sure the series you requested exists, or fix the download URL!"
-    exit 1
-  fi 
+function parse_sdrf_idf() {
+  local SERIES=$1
 
   ## samples are ERS in case of ArrayExpress. Why not ERX, you might ask? Yes, ask you might.   
   cat $SERIES.sdrf.txt | tr '\t' '\n' | grep "^ERS" | sort | uniq > $SERIES.sample.list
+}
 
-  ## curl info about each run (SRR/ERR/DRR) from ENA API; in this case we use ERS IDs 
-  RET=1
-  TRIES=1
-  until (( $RET == 0 )) 
-  do
-    ## for ArrayExpress, we query by sample ID because sdrf doesn't list the BioProject ID
-    ./curl_ena_metadata.sh $SERIES.sample.list > $SERIES.ena.tsv
-    RET=$?
-    TRIES=$((TRIES+1))
-    if (( $TRIES > 5 )) 
-    then
-      >&2 echo "ERROR: No ENA records can be retrieved for ArrayExpress samples $SERIES.sample.list!"
-      exit 1
-    fi 
-    sleep 1
-  done
-
-  ## make an accession table. If you adjust the ENA curl query, column numbers will change, so beware
-  if [[ -s $SERIES.accessions.tsv ]] 
-  then 
-    >&2 echo "WARNING: file $SERIES.accessions.tsv exists. This shouldn't normally happen. Overwriting the file by parsing $SERIES.ena.tsv.."
-    rm $SERIES.accessions.tsv
-  fi 
+function get_subseries_from_family {
+  local SERIES=$1
+  local OUTPUT_FILE=$2
+  local SUBGSE=`grep Series_relation ${SERIES}_family.soft | grep SuperSeries | perl -ne 'print "$1\n" if (m/(GSE\d+)/)'`
   
-  for i in `cat $SERIES.sample.list`
-  do
-    EXPS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | uniq | tr '\n' ',' | sed "s/,$//"`
-    echo -e "-\t$i\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
-  done
+  ## delete output file if it exists
+  if [[ -f $OUTPUT_FILE ]]
+  then
+    rm $OUTPUT_FILE
+  fi
 
-  ## make few more useful metadata files
-  cut -f 4 $SERIES.accessions.tsv | tr ',' '\n' | sort | uniq > $SERIES.run.list                               
-  cut -f 2,4 $SERIES.accessions.tsv > $SERIES.sample_x_run.tsv
-elif [[ $SERIES == PRJ* ]] 
-then
-  ## simple version of GEO processing (see above): pull all the needed metadata from ENA using PRJ*
-  echo $SERIES > $SERIES.project.list
+  ## pulls sub-series data
+  if [[ $SUBGSE == "" ]]
+  then
+    >&2 echo "ERROR: No GSE subseries were listed in ${SERIES}_family.soft file!"
+  else
+    for i in $SUBGSE
+    do
+      local PAD=`echo $i | perl -ne 's/\d{3}$/nnn/; print'`
+      wget -O ${i}_family.soft.gz https://ftp.ncbi.nlm.nih.gov/geo/series/$PAD/$i/soft/${i}_family.soft.gz
+      gzip -fd ${i}_family.soft.gz
+      grep Series_relation ${i}_family.soft | perl -ne 'print "$1\n" if (m/(PRJ[A-Z]+\d+)/)' | sort | uniq >> $OUTPUT_FILE
+    done
+  fi
+}
 
-  ## curl info about each run (SRR/ERR/DRR) from ENA API; v2 pulls GSM data etc 
-  RET=1
-  TRIES=1
-  until (( $RET == 0 )) 
+function download_metadata {
+  local SERIES=$1
+  local SCRIPT=$2
+  local DOWNLOAD_LIST=$3
+  local OUTPUT_FILE=$4
+
+  local STATUS=1
+  local TRIES=1
+
+  if [[ ! -s $DOWNLOAD_LIST ]]
+  then
+    >&2 echo "ERROR: No download list $DOWNLOAD_LIST found!"
+    return 1
+  fi
+
+
+  while [[ ! $STATUS -eq 0 && TRIES -le 5 ]]
   do
-    ./curl_ena_metadata.sh $SERIES.project.list > $SERIES.ena.tsv
-    RET=$?
+    $SCRIPT $DOWNLOAD_LIST > $OUTPUT_FILE
+    STATUS=$?
     TRIES=$((TRIES+1))
-    if (( $TRIES > 5 )) 
-    then
-      >&2 echo "ERROR: No ENA records can be retrieved for BioProject(s) $SERIES.project.list!"
-      exit 1
-    fi 
     sleep 1
   done
 
-  ## make an accession table. If you adjust the ENA curl query, column numbers will change, so beware
+  if [[ ! -s $OUTPUT_FILE ]]
+  then
+    >&2 echo "ERROR: Failed to download metadata for $SERIES using $SCRIPT and $DOWNLOAD_LIST!"
+    return 1
+  else
+    return $STATUS
+  fi
+}
+
+
+function alternative_download_metadata {
+  local SERIES=$1
+  local SCRIPT=$2
+  local OUTPUT_FILE=$3
+  local STATUS=1
+
+  ## try loading SRA metadata using subseries
+  >&2 echo "WARNING: replacing $SERIES.project.list with sub-series projects.."
+  if [[ ! -f $SERIES.subproject.list ]]
+  then
+      get_subseries_from_family "$SERIES" "$SERIES.subproject.list"
+  fi
+
+  ## try loading SRA metadata using subseries
+  if [[ -s $SERIES.subproject.list ]]
+  then
+    download_metadata "$SERIES" "$SCRIPT" "$SERIES.subproject.list" "$OUTPUT_FILE"
+    STATUS=$?
+  fi
+
+  ## try loading SRA using BioSample identifiers
+  if [ $STATUS -eq 1 ]
+  then
+    >&2 echo "WARNING: replacing $SERIES.project.list with BioSample identifiers.."
+    download_metadata "$SERIES" "$SCRIPT" "$SERIES.biosample.list" "$OUTPUT_FILE"
+    STATUS=$?
+  fi
+
+  if [ $STATUS -eq 1 ]
+  then
+    >&2 echo "ERROR: Failed to download metadata for $SERIES using $SCRIPT methods!"
+  fi
+  return $STATUS
+}
+
+function write_accessions() {
+  local SERIES=$1
+  local SAMPLE=$2
+  local SMPS=$3
+  local EXPS=$4
+  local RUNS=$5
+
+  ## check that we have all the IDs
+  if [[ $EXPS == "" || $RUNS == "" ]]
+  then
+    return 1
+  fi
+
+  # write the accessions to the accessions file
+  if [[ $SERIES == GSE* ]]
+  then
+    echo -e "$SAMPLE\t$SMPS\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
+  else
+    echo -e "-\t$SAMPLE\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
+  fi
+  return 0
+}
+
+function get_sample_ids() {
+  local SERIES=$1
+  local META=$2
+  local STATUS=1
+
+  ## delete accessions file if exists
   if [[ -s $SERIES.accessions.tsv ]] 
-  then 
-    >&2 echo "WARNING: file $SERIES.accessions.tsv exists. This shouldn't normally happen. Overwriting the file by parsing $SERIES.ena.tsv.."
+  then
     rm $SERIES.accessions.tsv
-  fi 
+  fi
 
-  ## for PRJ*, samples are SRS or ERS IDs: 
-  cat $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq > $SERIES.sample.list 
+  ## get sample, experiment, and run IDs for each sample from metadata file
+  if [[ -s $META ]]
+  then
+    for i in `cat $SERIES.sample.list`
+    do
+      ## get BioSample ID if possible
+      if [[ -s $SERIES.sample.relation.list ]]
+      then
+        local biosample=`grep $i $SERIES.sample.relation.list | cut -f 4 | tr -d '\n'`
+      else
+        local biosample=$i
+      fi
+      
+      ## try to get sample, experiment, and run IDs from metadata file using GSM
+      if [[ `grep $i $META` ]]
+      then
+        SMPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        EXPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        RUNS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        write_accessions $SERIES $i $SMPS $EXPS $RUNS
+        STATUS=$?
+      ## try to get sample, experiment, and run IDs from metadata file using BioSample
+      elif [[ `grep $biosample $META` ]]
+      then
+        SMPS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        EXPS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        RUNS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        write_accessions $SERIES $i $SMPS $EXPS $RUNS
+        STATUS=$?
+      else
+        >&2 echo "ERROR: No experiment or run ID found for $i in $META!"
+        STATUS=1
+        break
+      fi
 
-  for i in `cat $SERIES.sample.list`
-  do
-    EXPS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    RUNS=`grep $i $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-    echo -e "-\t$i\t$EXPS\t$RUNS" >> $SERIES.accessions.tsv
-  done
+      ## check that we have all the IDs
+      if [[ $STATUS -eq 1 ]]
+      then
+        >&2 echo "WARNING: No experiment or run ID found for $i in $META!"
+        break
+      fi
+    done
 
-  ## make few more useful metadata files
-  cut -f 4 $SERIES.accessions.tsv | tr ',' '\n' | sort | uniq > $SERIES.run.list                               
-  cut -f 2,4 $SERIES.accessions.tsv > $SERIES.sample_x_run.tsv
-else 
-  >&2 echo "ERROR: The series ID *must* start with GSE, E-MTAB, or PRJ!"
-  exit 1
-fi 
+    ## check that all samples are in accessions file and change status to 0
+    if [[ `cat $SERIES.sample.list | wc -l` -eq `cut -f 1 $SERIES.accessions.tsv | wc -l` ]]
+    then
+      STATUS=0
+    fi
+  else
+    >&2 echo "ERROR: No metadata file $META found!"
+  fi
+  return $STATUS
+}
 
-## if we only want a fraction of samples, make sure we subset all the relevant files
-if [[ $SUBSET != "" ]]
-then
-  >&2 echo "Narrowing down the dataset using the file $SUBSET"
-  >&2 echo "New list of the samples to be processed:"
-  >&2 cat $SUBSET 
-  grep -f $SUBSET $SERIES.sample.list > $SERIES.sample.list.tmp
-  mv $SERIES.sample.list.tmp $SERIES.sample.list
-  grep -f $SUBSET $META > $META.tmp 
-  mv $META.tmp $META
-  grep -f $SUBSET $SERIES.accessions.tsv > $SERIES.accessions.tsv.tmp 
-  mv $SERIES.accessions.tsv.tmp $SERIES.accessions.tsv
+subset_accessions() {
+  local SERIES=$1
+  local SUBSET=${2:-""}
 
-  cut -f 4 $SERIES.accessions.tsv | tr ',' '\n' | sort | uniq > $SERIES.run.list                               
-  ## for GSE, sample=GSM; for E-MTAB/PRJ, sample=ERS/SRS
+  if [[ $SUBSET != "" ]]
+  then
+    >&2 echo "Narrowing down the dataset using the file $SUBSET"
+    >&2 echo "New list of the samples to be processed:"
+    >&2 cat $SUBSET 
+    grep -f $SUBSET $SERIES.sample.list > $SERIES.sample.list.tmp
+    mv $SERIES.sample.list.tmp $SERIES.sample.list
+    grep -f $SUBSET $SERIES.accessions.tsv > $SERIES.accessions.tsv.tmp
+    mv $SERIES.accessions.tsv.tmp $SERIES.accessions.tsv
+  fi
+}
+
+subset_meta() {
+  local META=$1
+  local SUBSET=${2:-""}
+
+  if [[ $SUBSET != "" ]]
+  then
+    grep -f $SUBSET $META > $META.tmp 
+    mv $META.tmp $META
+  fi
+}
+
+function make_run_relation_files() {
+  local SERIES=$1
+
+  ## make run list
+  cut -f 4 $SERIES.accessions.tsv | tr ',' '\n' | sort | uniq > $SERIES.run.list
+  
+  ## make sample x run file
   if [[ $SERIES == GSE* ]]
   then
     cut -f 1,4 $SERIES.accessions.tsv > $SERIES.sample_x_run.tsv
-  else 
+  else
     cut -f 2,4 $SERIES.accessions.tsv > $SERIES.sample_x_run.tsv
-  fi
-fi
+  fi                            
+}
 
-## finally, classify each run into 3 major types: 
-## 1) we have useable 10x paired-end files; 2) we need to get them from 10x BAM; 3) we need to get them from SRA
-## simultaneously, '$SERIES.urls.list' is generated listing all things that need to be downloaded 
-if [[ $META == "$SERIES.ena.tsv" ]]
-then
-  ./parse_ena_metadata.sh $SERIES > $SERIES.parsed.tsv
-else
-  ./parse_sra_metadata.sh $SERIES > $SERIES.parsed.tsv
-fi
+function make_util_files() {
+  local SERIES=$1
+  local SUBSET=${2:-""}
+  local STATUS=1
+
+  if [[ -s $SERIES.accessions.tsv ]] 
+  then 
+    >&2 echo "WARNING: file $SERIES.accessions.tsv exists. This shouldn't normally happen. Overwriting the file.."
+    rm $SERIES.accessions.tsv
+  fi
+
+  
+  ## get sample, experiment, and run IDs for each sample from SRA metadata file
+  if [[ $SERIES == GSE* ]]
+  then
+    get_sample_ids $SERIES $SERIES.sra.tsv
+    STATUS=$?
+  fi
+
+  ## get sample, experiment, and run IDs for each sample from ENA metadata file
+  if [[ $STATUS -eq 1 ]]
+  then
+    get_sample_ids $SERIES $SERIES.ena.tsv
+    STATUS=$?
+  fi
+
+  if [[ $STATUS -eq 1 ]]
+  then
+    >&2 echo "ERROR: Failed to get sample, experiment, and run IDs for $SERIES using any of the available metadata files!"
+    exit 1
+  fi
+
+  ## subset the accessions file if a sample list is provided
+  subset_accessions $SERIES $SUBSET
+
+  ## make few more useful metadata files
+  make_run_relation_files $SERIES
+
+  ## finally, classify each run into 3 major types: 
+  ## 1) we have useable 10x paired-end files; 2) we need to get them from 10x BAM; 3) we need to get them from SRA
+  ## simultaneously, '$SERIES.urls.list' is generated listing all things that need to be downloaded 
+  if [[ -s "$SERIES.ena.tsv" ]]
+  then
+    subset_meta $SERIES.ena.tsv $SUBSET
+    ./parse_ena_metadata.sh $SERIES > $SERIES.parsed.tsv
+  elif [[ -s "$SERIES.sra.tsv" ]]
+  then
+    subset_meta $SERIES.ena.tsv $SUBSET
+    ./parse_sra_metadata.sh $SERIES > $SERIES.parsed.tsv
+  else
+    >&2 echo "ERROR: No metadata file found for $SERIES!"
+    exit 1
+  fi
+}
+
+function process_geo() {
+  local SERIES=$1
+  local SUBSET=${2:-""}
+
+  ## download the family file from GEO
+  download_geo_family $SERIES
+  
+  ## parse the family file to get the project and sample IDs
+  parse_geo_family $SERIES
+
+  ## download metadata from SRA
+  download_metadata "$SERIES" "./curl_sra_metadata.sh" "$SERIES.project.list" "$SERIES.sra.tsv"
+  local SRA_STATUS=$?
+
+
+  ## if the download failed, try alternative methods
+  if [ $SRA_STATUS -eq 1 ]
+  then
+    alternative_download_metadata $SERIES "./curl_sra_metadata.sh" "$SERIES.sra.tsv"
+    SRA_STATUS=$?
+  fi
+
+  ## download metadata from ENA
+  download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
+  local ENA_STATUS=$? 
+
+  ## if the download failed, try alternative methods
+  if [ $ENA_STATUS -eq 1 ]
+  then
+    alternative_download_metadata $SERIES "./curl_ena_metadata.sh" "$SERIES.ena.tsv"
+    ENA_STATUS=$?
+  fi
+
+  ## if both downloads failed, exit with an error
+  if [ $SRA_STATUS -eq 1 ] && [ $ENA_STATUS -eq 1 ]
+  then
+    >&2 echo "ERROR: Failed to download metadata for $SERIES using any of the available methods!"
+    exit 1
+  fi
+
+  ## make utility files
+  make_util_files $SERIES
+}
+
+function process_arrayexpress {
+  local SERIES=$1
+  local SUBSET=${2:-""}
+
+  ## download the SDRF and IDF files from ArrayExpress
+  download_sdrf_idf_files $SERIES
+  
+  ## parse the SDRF file to get the project and sample IDs
+  parse_sdrf_idf $SERIES
+
+  ## download metadata from ENA
+  download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.sample.list" "$SERIES.ena.tsv"
+  local ENA_STATUS=$?
+
+  ## if failed, exit with an error
+  if [ $ENA_STATUS -eq 1 ]
+  then
+    >&2 echo "ERROR: Failed to download metadata for $SERIES using any of the available methods!"
+    exit 1
+  fi
+
+  ## make utility files
+  make_util_files $SERIES $SUBSET
+}
+
+function process_bioproject {
+  local SERIES=$1
+  local SUBSET=${2:-""}
+  
+  ## simple version of GEO processing (see above): pull all the needed metadata from ENA using PRJ*
+  echo $SERIES > $SERIES.project.list
+
+  ## download metadata from ENA
+  download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
+  local ENA_STATUS=$?
+
+  ## if failed, exit with an error
+  if [ $ENA_STATUS -eq 1 ]
+  then
+    >&2 echo "ERROR: Failed to download metadata for $SERIES using any of the available methods!"
+    exit 1
+  fi
+
+  ## create sample list
+  cat $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq > $SERIES.sample.list 
+
+  ## make utility files
+  make_util_files $SERIES $SUBSET
+}
+
+function main () {
+  if (( $# != 1 && $# != 2 ))
+  then
+    >&2 echo "USAGE: ./collect_metadata.sh <series_id> [sample_list]"
+    >&2 echo
+    >&2 echo "(requires curl_ena_metadata.sh and parse_ena_metadata.sh present in the same directory)" 
+    exit 1
+  fi
+
+  local SERIES=$1
+  local SUBSET=${2:-""}
+
+  # Handle different series types
+  case "$SERIES" in
+    GSE*)  process_geo "$SERIES" "$SUBSET" ;;
+    E-MTAB*) process_arrayexpress "$SERIES" "$SUBSET" ;;
+    PRJ*)  process_bioproject "$SERIES" "$SUBSET" ;;
+    *) echo "ERROR: The series ID must start with GSE, E-MTAB, or PRJ!" >&2; exit 1 ;;
+  esac
+}
+
+main "$@"
