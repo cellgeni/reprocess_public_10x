@@ -40,7 +40,7 @@ do
   fi
 
   # Compare the actual output with the expected output
-  if [[ ! diff -q $filename $file ]]
+  if ! diff -q $filename $file
   then
     echo "❌ERROR: Output file $filename does not match expected output!"
     exit 1
