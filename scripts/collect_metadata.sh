@@ -34,7 +34,7 @@ function parse_geo_family() {
   local SERIES=$1
 
   ## get bioproject ID
-  grep Series_relation ${SERIES}_family.soft | perl -ne 'print "$1\n" if (m/(PRJ[A-Z]+\d+)/)' | sort | uniq || echo "" > $SERIES.project.list
+  grep Series_relation ${SERIES}_family.soft | perl -ne 'print "$1\n" if (m/(PRJ[A-Z]+\d+)/)' | sort | uniq  > $SERIES.project.list
   
   ## get sample IDs; samples here are GSM IDs; usually for a 10x GSM==SRS==SRX, but I haven't checked *all* of the SRA you know 
   awk '
@@ -325,6 +325,8 @@ function make_util_files() {
 function process_geo() {
   local SERIES=$1
   local SUBSET=${2:-""}
+  local SRA_STATUS=1
+  local ENA_STATUS=1
 
   ## download the family file from GEO
   download_geo_family $SERIES
@@ -337,11 +339,11 @@ function process_geo() {
   then
     ## download metadata from SRA
     download_metadata "$SERIES" "./curl_sra_metadata.sh" "$SERIES.project.list" "$SERIES.sra.tsv"
-    local SRA_STATUS=$?
+    SRA_STATUS=$?
 
     ## download metadata from ENA
     download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
-    local ENA_STATUS=$?
+    ENA_STATUS=$?
   fi
 
 
