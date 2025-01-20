@@ -30,4 +30,4 @@ jobs:
       run: |
         chmod +x ./scripts/*
         chmod +x ./tests/test_metadata.sh
-        ./tests/test_metadata.sh ${matrix.series_id}
+        ./tests/test_metadata.sh ${{ matrix.series_id }}
