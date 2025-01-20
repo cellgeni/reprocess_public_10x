@@ -1,0 +1,33 @@
+name: Test Collect Metadata Script
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - series_id: GSE191067
+          - series_id: GSE264508
+          - series_id: GSE274955
+          - series_id: GSE250130 
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget perl curl jq
+
+    - name: Run metadata collection tests
+      run: |
+        chmod +x ./scripts/*
+        chmod +x ./tests/test_metadata.sh
+        ./tests/test_metadata.sh ${{ matrix.series_id }}
