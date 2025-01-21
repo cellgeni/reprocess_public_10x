@@ -46,7 +46,7 @@ function parse_geo_family() {
   /Sample_relation = BioSample:/ { biosample=gensub(/.*(SAMN[0-9]+)/, "\\1", "g", $0) }
   
   # When all three pieces of information are found, print them as a tab-separated line
-  /BioSample:/ && sample && geo && sra && biosample {
+  sample && geo && sra && biosample {
     print sample,geo,sra,biosample
     sample="";  geo=""; sra=""; biosample=""
   }
@@ -398,7 +398,7 @@ function process_geo() {
   fi
 
   ## make utility files
-  make_util_files $SERIES
+  make_util_files $SERIES $SUBSET
 }
 
 function process_arrayexpress {
