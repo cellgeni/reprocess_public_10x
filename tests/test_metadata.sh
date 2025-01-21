@@ -13,6 +13,15 @@ OUTPUT_DIR="${GITHUB_WORKSPACE}/output/$SERIES"
 # Create output directory and copy all scripts
 mkdir -p $OUTPUT_DIR
 cp ./scripts/* $OUTPUT_DIR
+
+# Copy subset file if provided
+if [[ $SAMPLE_LIST ]]
+then
+  cp $SAMPLE_LIST $OUTPUT_DIR
+  SAMPLE_LIST=$(basename $SAMPLE_LIST)
+fi
+
+# Move to the output directory
 cd $OUTPUT_DIR
 
 # Load metadata
