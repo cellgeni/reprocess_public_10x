@@ -233,7 +233,10 @@ subset_accessions() {
   then
     >&2 echo "Narrowing down the dataset using the file $SUBSET"
     >&2 echo "New list of the samples to be processed:"
-    >&2 cat $SUBSET 
+    >&2 cat $SUBSET
+    ## add newline character to the end of the file if there is none
+    sed -i -e '$a\'
+    ## subset the accessions file
     grep -f $SUBSET $SERIES.sample.list > $SERIES.sample.list.tmp
     mv $SERIES.sample.list.tmp $SERIES.sample.list
     grep -f $SUBSET $SERIES.accessions.tsv > $SERIES.accessions.tsv.tmp
