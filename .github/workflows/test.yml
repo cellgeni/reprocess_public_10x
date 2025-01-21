@@ -13,9 +13,23 @@ jobs:
       matrix:
         include:
           - series_id: GSE191067
+            subset_list: ""
           - series_id: GSE264508
+            subset_list: ""
           - series_id: GSE274955
-          - series_id: GSE250130 
+            subset_list: ""
+          - series_id: GSE250130
+            subset_list: ""
+          - series_id: E-MTAB-9221
+            subset_list: ""
+          - series_id: GSE111360
+            subset_list: ${{ github.workspace }}/test_data/GSE111360/GSE111360.subset.list
+          - series_id: GSE117988
+            subset_list: ""
+          - series_id: GSE160513
+            subset_list: ""
+          - series_id: PRJNA511433
+            subset_list: ""
     
     steps:
     - name: Checkout repository
@@ -30,4 +44,4 @@ jobs:
       run: |
         chmod +x ./scripts/*
         chmod +x ./tests/test_metadata.sh
-        ./tests/test_metadata.sh ${{ matrix.series_id }}
+        ./tests/test_metadata.sh ${{ matrix.series_id }} $${{ matrix.subset_list }}

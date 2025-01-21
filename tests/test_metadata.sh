@@ -2,7 +2,7 @@
 set -e
 
 if [ "$#" -lt 1 ]; then
-    echo "Usage: $0 <GSE_ID> <sample_list>"
+    echo "Usage: $0 <SERIES> <sample_list>"
     exit 1
 fi
 
