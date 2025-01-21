@@ -40,6 +40,7 @@ if [[ $SUBSET != "" ]]
 then 
   >&2 echo "WARNING: Using file $SUBSET to only process select samples!"
   SUBSET=`readlink -f $SUBSET`
+  cp $SUBSET $SERIES.subset.list
   if [[ `grep "^GSM" $SUBSET` == "" && `grep "^SRS" $SUBSET` == "" && `grep "^ERS" $SUBSET` == "" ]]
   then
     >&2 echo "ERROR: The subset file $SUBSET can only contain GSM, SRS, or ERS IDs!"
