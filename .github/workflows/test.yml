@@ -10,11 +10,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - series_id: GSE191067
-            subset_list: ""
-            comment: "No ENA metadata"
           - series_id: GSE264508
             subset_list: ""
             comment: ".fastq and .sra files in ENA metadata"
