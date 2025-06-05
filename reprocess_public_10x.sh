@@ -51,10 +51,10 @@ fi
 SDIR=`readlink -f $0`
 SDIR=`dirname $SDIR`
 cd $SERIES
-cp $SDIR/scripts/* .
+export PATH="$SDIR/scripts:$PATH"
 
 ## after all scripts are copied and directories are checked, collect all metadata
-./collect_metadata.sh $SERIES $SUBSET
+collect_metadata.sh $SERIES $SUBSET
 
 if [[ -s $SERIES.sra.tsv || -s $SERIES.ena.tsv && -s $SERIES.accessions.tsv && -s $SERIES.parsed.tsv ]]
 then
@@ -67,27 +67,27 @@ fi
 >&2 echo; >&2 echo "=============================== STEP 2: DOWNLOAD ALL THE RELEVANT FILES =================================="; >&2 echo
 
 ## download all the necessary raw files using 'transfer' queue on Farm. Did we tell you this whole thing is Sanger-specific?  
-./continuous_download.sh $SERIES
+continuous_download.sh $SERIES
 
 >&2 echo; >&2 echo "=============================== STEP 3: CONVERT BAM/SRA -> FASTQ.GZ (if needed) =================================="; >&2 echo
 
 ## convert BAM and SRA files into properly formatted fastq.gz files. Rename frivolously named BAMs and SRAs along the way.
 if [[ `grep -w "BAM$" $SERIES.parsed.tsv` != "" || `grep -w "SRA$" $SERIES.parsed.tsv` != "" ]]
 then
-  ./convert_to_fastq.sh $SERIES 
+  convert_to_fastq.sh $SERIES 
 fi
 
 >&2 echo; >&2 echo "=============================== STEP 4: GROUP FASTQ BY SAMPLE =================================="; >&2 echo
 
 # at this point we check that every run (SRR/ERR) is matched with a pair of 10x approved fastq.gz files, and notify the user about ones that do not 
 ## reorganize fastqs: 1) make fastqs dir; 2) move all proper files there; 3) group them by sample. 
-./reorganise_fastqs.sh $SERIES
+reorganise_fastqs.sh $SERIES
 
 >&2 echo; >&2 echo "=============================== STEP 5: RUN STARSOLO AND SOLO_QC =================================="; >&2 echo
 ## actually run STARsolo on all of them! (auto-cleanup?) 
-./run_starsolo.sh $SERIES
+run_starsolo.sh $SERIES
 
 ## run solo_QC.sh on all
-./solo_QC.sh > $SERIES.solo_qc.tsv
+solo_QC.sh > $SERIES.solo_qc.tsv
 
 >&2 echo "ALL PROCESSING IS DONE FOR DATASET $SERIES!"

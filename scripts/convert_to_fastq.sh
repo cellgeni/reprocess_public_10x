@@ -4,7 +4,7 @@ SERIES=$1 ## GSE123456
 
 if (( $# != 1 ))
 then
-  >&2 echo "USAGE: ./convert_to_fastq.sh <series_id>"
+  >&2 echo "USAGE: convert_to_fastq.sh <series_id>"
   >&2 echo
   >&2 echo "(requires bsub_bam2fastq.sh/bsub_sra2fastq.sh, bam_to_10x_fastq_gz.sh/sra_to_10x_fastq_gz.sh," 
   >&2 echo "and non-empty <series_id>.parsed.tsv)" 
@@ -13,11 +13,7 @@ fi
 
 ## all BAM/SRA -> fastq.gz conversion is done in /done_wget
 cd done_wget
-cp ../$SERIES.parsed.tsv . 
-cp ../bsub_bam2fastq.sh .
-cp ../bsub_sra2fastq.sh .
-cp ../bam_to_10x_fastq_gz.sh .
-cp ../sra_to_10x_fastq_gz.sh .
+cp .$SERIES.parsed.tsv .
 
 BAMS=`grep -w "BAM$" $SERIES.parsed.tsv | cut -f1`
 SRAS=`grep -w "SRA$" $SERIES.parsed.tsv | cut -f1`
@@ -33,7 +29,7 @@ done
 ## job array submission here
 if [[ $BAMS != "" ]]
 then 
-  ./bsub_bam2fastq.sh $SERIES bam_to_10x_fastq_gz.sh
+  bsub_bam2fastq.sh $SERIES bam_to_10x_fastq_gz.sh
 fi
 
 for i in $SRAS
@@ -47,7 +43,7 @@ done
 ## job array submission here
 if [[ $SRAS != "" ]]
 then
-  ./bsub_sra2fastq.sh $SERIES sra_to_10x_fastq_gz.sh
+  bsub_sra2fastq.sh $SERIES sra_to_10x_fastq_gz.sh
 fi
 
 ## patiently wait for all the jobs to complete

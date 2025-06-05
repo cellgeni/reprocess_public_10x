@@ -7,7 +7,7 @@ SERIES=$1
 
 if (( $# != 1 ))
 then
-  >&2 echo "USAGE: ./continuous_download.sh <series_id>"
+  >&2 echo "USAGE: continuous_download.sh <series_id>"
   >&2 echo
   >&2 echo "(requires bsub_transfer.sh, cleanup_wget_downloads.sh, and non-empty <series_id>.urls.list)" 
   exit 1
@@ -26,7 +26,7 @@ echo "Iteration 1: downloading the files..."
 echo "--------------------------------------------------------" 
 
 ## job array submission - use the whole list here
-./bsub_transfer.sh $SERIES wget_restart.sh $SERIES.urls.list
+bsub_transfer.sh $SERIES wget_restart.sh $SERIES.urls.list
 
 
 ## step 1: check if all the download jobs have finished successfully. 
@@ -39,7 +39,7 @@ done
 ## they did finish! let's run the cleanup  
 echo "Cleanup 1: running the cleanup script..."
 echo "--------------------------------------------------------" 
-./cleanup_wget_downloads.sh $SERIES.urls.list
+cleanup_wget_downloads.sh $SERIES.urls.list
 
 ## let us repeat until no URLs are left in missing_URLs.list
 while [[ -f missing_URLs.list ]]
@@ -49,7 +49,7 @@ do
   echo "--------------------------------------------------------" 
 
   ## again, same job array strategy
-  ./bsub_transfer.sh $SERIES wget_restart.sh missing_URLs.list
+  bsub_transfer.sh $SERIES wget_restart.sh missing_URLs.list
    
   ## wait patiently 
   while [[ `bjobs -w | grep "transfer\.$SERIES"` != "" ]] 
@@ -60,7 +60,7 @@ do
   ## they did finish! let's run the cleanup again
   echo "Cleanup $COUNT: running the cleanup script..."
   echo "--------------------------------------------------------" 
-  ./cleanup_wget_downloads.sh $SERIES.urls.list
+  cleanup_wget_downloads.sh $SERIES.urls.list
 done
 
 echo "FILE DOWNLOAD: ALL DONE!"  
