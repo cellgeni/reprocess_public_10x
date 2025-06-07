@@ -2,9 +2,9 @@
 
 
 function bam2fastq {
-  RUN=$1
-  CPUS=$2
-  CMD=${3:-""}
+  local RUN=$1
+  local CPUS=$2
+  local CMD=${3:-""}
   ## this has to be 10x bamtofastq, ideally the latest version
   ## TODO: need to somehow auto-detect when --cr11 is needed
   $CMD bamtofastq --nthreads $CPUS $RUN.bam $RUN
@@ -60,11 +60,11 @@ function bam2fastq {
 }
 
 function main () {
-  PARSED=$1
-  CPUS=16
-  RUN=`grep -w "BAM$" $PARSED | cut -f1 | head -$LSB_JOBINDEX | tail -1`
-  SIF="/nfs/cellgeni/singularity/images/reprocess_10x.sif"
-  CMD="singularity run --bind /nfs,/lustre $SIF"
+  local PARSED=$1
+  local CPUS=16
+  local RUN=`grep -w "BAM$" $PARSED | cut -f1 | head -$LSB_JOBINDEX | tail -1`
+  local SIF="/nfs/cellgeni/singularity/images/reprocess_10x.sif"
+  local CMD="singularity run --bind /nfs,/lustre $SIF"
 
   bam2fastq $RUN $CPUS $CMD
 }
