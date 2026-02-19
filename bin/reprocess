@@ -34,6 +34,7 @@ REPROCESS_ROOT=$(_resolve_root)
 # ---------- Load shared code ------------------------------------------------
 
 source "$REPROCESS_ROOT/etc/defaults.conf"
+source "$REPROCESS_ROOT/lib/info.sh"
 
 # ---------- Top-level help ---------------------------------------------------
 
@@ -63,8 +64,64 @@ Configuration:
   or with CLI flags.
 
 Examples:
-  starsolo run GSE123456 --subset samples_to_process.txt
+  reprocess run GSE123456 --subset samples.txt
+  reprocess info PRJNA123456 --subset samples.txt
 EOF
+}
+
+# ---------- Argument parsers ------------------------------------------------
+
+parse_info_args() {
+    SERIES=${1:-}; shift || true
+    SUBSET=""
+    OUTDIR="$PWD"
+
+    # Check for required arguments
+    if [[ -z "$SERIES" ]]; then
+        echo "Error: <series> argument is required." >&2
+        show_info_help
+        exit 1
+    fi
+
+    # Parse options
+    while (( $# > 0 )); do
+        case "$1" in
+            --subset)
+                SUBSET="${2:-}"
+                # Check that the non-empty subset file exists and subset file is given
+                if [[ -z "$SUBSET" || ! -s "$SUBSET" ]]; then
+                    echo "Error: --subset option requires a valid file path argument." >&2
+                    exit 1
+                fi
+                SUBSET=$(readlink -f "$SUBSET")
+                shift 2
+                ;;
+            -h|--help)
+                show_info_help
+                exit 0
+                ;;
+            -o|--outdir)
+                # Get the output directory argument
+                OUTDIR="${2:-}"
+                if [[ -z "$OUTDIR" ]]; then
+                    echo "Error: --outdir option requires a directory path argument." >&2
+                    exit 1
+                fi
+                # Create the output directory if it doesn't exist, and check that it's a valid directory
+                mkdir -p "$OUTDIR"
+                if [[ ! -d "$OUTDIR" ]]; then
+                    echo "Error: --outdir argument must be a valid directory path." >&2
+                    exit 1
+                fi
+                OUTDIR=$(readlink -f "$OUTDIR")
+                shift 2
+                ;;
+            *)
+                echo "Unknown option: $1" >&2
+                show_info_help
+                exit 1
+                ;;
+        esac
 }
 
 # ---------- Dispatch --------------------------------------------------------
@@ -80,7 +137,7 @@ main() {
             show_main_help
             exit 0 ;;
         --version)
-            echo "reprocess v${VERSION}"
+            echo "reprocess v${REPROCESS_VERSION}"
             exit 0 ;;
     esac
 
@@ -88,9 +145,12 @@ main() {
 
     case "$COMMAND" in
         info)
-            echo "Running command '$COMMAND' with arguments: $*" >&2
-            echo "Not implemented yet — actually working on this right now!" >&2
-            exit 1 ;;
+            if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+                show_info_help; exit 0
+            fi
+            parse_info_args "$@"
+            info "$SERIES" "$SUBSET" "$OUTDIR"
+            ;;
         download|convert|group|map|run)
             echo "Running command '$COMMAND' with arguments: $*" >&2
             echo "Not implemented yet — stay tuned!" >&2
