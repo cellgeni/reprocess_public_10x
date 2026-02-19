@@ -1,0 +1,107 @@
+#!/bin/bash -e
+# =============================================================================
+# reprocess — unified CLI for one-pot download and processing of a 10x dataset
+# =============================================================================
+# Version 4.0
+#
+# Usage:  reprocess <subcommand> [args…]
+#         reprocess --help
+#
+# Subcommands: info, download, convert, group, starsolo, run
+# =============================================================================
+
+set -euo pipefail
+
+REPROCESS_VERSION="2.0"
+
+# ---------- Resolve install paths -------------------------------------------
+
+# REPROCESS_ROOT is the repo root (parent of bin/).
+# Works whether called via symlink, PATH, or direct path.
+_resolve_root() {
+    local SOURCE="${BASH_SOURCE[0]}"
+    while [[ -L "$SOURCE" ]]; do
+        local DIR
+        DIR=$(cd -P "$(dirname "$SOURCE")" && pwd)
+        SOURCE=$(readlink "$SOURCE")
+        [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+    done
+    cd -P "$(dirname "$SOURCE")/.." && pwd
+}
+
+REPROCESS_ROOT=$(_resolve_root)
+
+# ---------- Load shared code ------------------------------------------------
+
+source "$REPROCESS_ROOT/etc/defaults.conf"
+
+# ---------- Top-level help ---------------------------------------------------
+
+show_main_help() {
+    cat <<EOF
+reprocess v${REPROCESS_VERSION} — unified CLI for reprocessing scRNA-seq datasets
+
+Usage:
+  reprocess <subcommand> <args…> [options]
+  reprocess --help | --version
+
+Commands:
+    info        Get dataset metadata and links to raw data files
+    download    Download raw data files
+    convert     Convert raw data to FASTQ format (if necessary)
+    group       Group FASTQ files by sample and prepare for processing
+    map         Run STARsolo mapping and quantification
+    run         Run the full pipeline (info → download → convert → group → map)
+
+Global options (available for all platforms):
+  -h, --help                Show help (per-platform if after platform name)
+  --version                 Print version
+
+Configuration:
+  Defaults are read from $REPROCESS_ROOT/etc/defaults.conf
+  Override with environment variables (STARSOLO_CPUS, STARSOLO_REF_BASE, …)
+  or with CLI flags.
+
+Examples:
+  starsolo run GSE123456 --subset samples_to_process.txt
+EOF
+}
+
+# ---------- Dispatch --------------------------------------------------------
+
+main() {
+    if (( $# == 0 )); then
+        show_main_help
+        exit 0
+    fi
+
+    case "$1" in
+        --help|-h)
+            show_main_help
+            exit 0 ;;
+        --version)
+            echo "reprocess v${VERSION}"
+            exit 0 ;;
+    esac
+
+    local COMMAND="$1"; shift
+
+    case "$COMMAND" in
+        info)
+            echo "Running command '$COMMAND' with arguments: $*" >&2
+            echo "Not implemented yet — actually working on this right now!" >&2
+            exit 1 ;;
+        download|convert|group|map|run)
+            echo "Running command '$COMMAND' with arguments: $*" >&2
+            echo "Not implemented yet — stay tuned!" >&2
+            exit 1 ;;
+        *)
+            echo "ERROR: Unknown command '$COMMAND'" >&2
+            show_main_help
+            exit 1 ;;
+    esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
