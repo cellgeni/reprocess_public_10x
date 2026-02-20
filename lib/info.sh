@@ -34,7 +34,7 @@ function download_geo_family() {
 
     ## download the so-called soft_family file, and use it to generate same files as above
     local PAD=`echo $GSE | perl -ne 's/\d{3}$/nnn/; print'`
-    wget -t 5 -O ${GSE}_family.soft.gz https://ftp.ncbi.nlm.nih.gov/geo/series/$PAD/$GSE/soft/${GSE}_family.soft.gz
+    wget -q -t 5 -O ${GSE}_family.soft.gz https://ftp.ncbi.nlm.nih.gov/geo/series/$PAD/$GSE/soft/${GSE}_family.soft.gz
     ## -f overwrites the old stuff
     gzip -fd ${GSE}_family.soft.gz
     if [[ ! -s ${GSE}_family.soft ]]
@@ -81,6 +81,7 @@ function etools_bioproject_from_gse() {
     fi
 
     # Perform esummary to get the BioProject ID and check for errors
+    sleep 0.34
     curl -s "${ESUMMARY_BASE}db=gds&query_key=${QKEY}&WebEnv=${WEBENV}&retmode=json" | jq . > esummary.json
     
     # Check that exactly one record was returned
@@ -158,7 +159,8 @@ function gse_from_bioproject() {
         return 1
     fi
 
-    # Perform esummary to get the GSE ID and check for errors
+    # Perform esummary to get the GSE ID and check for errors (wait a bit to avoid hitting NCBI rate limits)
+    sleep 0.34
     curl -s "${ESUMMARY_BASE}db=gds&query_key=${QKEY}&WebEnv=${WEBENV}&retmode=json" | jq . > esummary.json
     
     # Check that at least one record was returned
