@@ -20,7 +20,19 @@ setup() {
 }
 
 @test "extract bioproject from GSE using eutils" {
+    run etools_bioproject_from_gse "GSE160513"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "PRJNA673418|5" ]]
+}
+
+@test "extract bioproject from GSE" {
     run bioproject_from_gse "GSE160513"
     [ "$status" -eq 0 ]
     [[ "$output" == "PRJNA673418|5" ]]
+}
+
+@test "extract GSE from bioproject using eutils" {
+    run gse_from_bioproject "PRJNA673418"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "GSE160513|5" ]]
 }
