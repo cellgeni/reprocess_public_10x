@@ -40,10 +40,10 @@ function parse_geo_family() {
   awk '
 	BEGIN {OFS="\t"}
 	# get all IDs
-  /\^SAMPLE/ { sample=gensub(/.*(GSM[0-9]+)/, "\\1", "g", $0) }
-  /Sample_geo_accession/ { geo=gensub(/.*(GSM[0-9]+)/, "\\1", "g", $0) }
-  /Sample_relation = SRA:/ { sra=gensub(/.*(SRX[0-9]+)/, "\\1", "g", $0) }
-  /Sample_relation = BioSample:/ { biosample=gensub(/.*(SAMN[0-9]+)/, "\\1", "g", $0) }
+  /\^SAMPLE/ { match($0, /GSM[0-9]+/); sample=substr($0, RSTART, RLENGTH) }
+  /Sample_geo_accession/ { match($0, /GSM[0-9]+/); geo=substr($0, RSTART, RLENGTH) }
+  /Sample_relation = SRA:/ { match($0, /SRX[0-9]+/); sra=substr($0, RSTART, RLENGTH) }
+  /Sample_relation = BioSample:/ { match($0, /SAMN[0-9]+/); biosample=substr($0, RSTART, RLENGTH) }
   
   # When all three pieces of information are found, print them as a tab-separated line
   sample && geo && sra && biosample {
@@ -187,17 +187,17 @@ function get_sample_ids() {
       ## try to get sample, experiment, and run IDs from metadata file using GSM
       if [[ `grep $i $META` ]]
       then
-        SMPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-        EXPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-        RUNS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        SMPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SED]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        EXPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SED]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        RUNS=`grep $i $META | tr '\t' '\n' | grep -P "^[SED]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
         write_accessions $SERIES $i $SMPS $EXPS $RUNS
         STATUS=$?
       ## try to get sample, experiment, and run IDs from metadata file using BioSample
       elif [[ `grep $biosample $META` ]]
       then
-        SMPS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-        EXPS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-        RUNS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        SMPS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SED]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        EXPS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SED]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        RUNS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SED]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
         write_accessions $SERIES $i $SMPS $EXPS $RUNS
         STATUS=$?
       else
@@ -229,13 +229,13 @@ subset_accessions() {
   local SERIES=$1
   local SUBSET=${2:-""}
 
-  if [[ $SUBSET != "" ]]
+  if [[ -s $SUBSET ]]
   then
     >&2 echo "Narrowing down the dataset using the file $SUBSET"
     >&2 echo "New list of the samples to be processed:"
     >&2 cat $SUBSET
     ## add newline character to the end of the file if there is none
-    sed -i -e '$a\'
+    sed -i -e '$a\' $SUBSET
     ## subset the accessions file
     grep -f $SUBSET $SERIES.sample.list > $SERIES.sample.list.tmp
     mv $SERIES.sample.list.tmp $SERIES.sample.list
@@ -248,9 +248,9 @@ subset_meta() {
   local META=$1
   local SUBSET=${2:-""}
 
-  if [[ $SUBSET != "" ]]
+  if [[ -s $SUBSET ]]
   then
-    grep -f $SUBSET $META > $META.tmp 
+    grep -f $SUBSET $META > $META.tmp
     mv $META.tmp $META
   fi
 }
@@ -314,11 +314,11 @@ function make_util_files() {
   if [[ -s "$SERIES.ena.tsv" ]]
   then
     subset_meta $SERIES.ena.tsv $SUBSET
-    ./parse_ena_metadata.sh $SERIES > $SERIES.parsed.tsv
+    parse_ena_metadata.sh $SERIES > $SERIES.parsed.tsv
   elif [[ -s "$SERIES.sra.tsv" ]]
   then
     subset_meta $SERIES.ena.tsv $SUBSET
-    ./parse_sra_metadata.sh $SERIES > $SERIES.parsed.tsv
+    parse_sra_metadata.sh $SERIES > $SERIES.parsed.tsv
   else
     >&2 echo "ERROR: No metadata file found for $SERIES!"
     exit 1
@@ -341,11 +341,11 @@ function process_geo() {
   if [[ -s $SERIES.project.list ]]
   then
     ## download metadata from SRA
-    download_metadata "$SERIES" "./curl_sra_metadata.sh" "$SERIES.project.list" "$SERIES.sra.tsv"
+    download_metadata "$SERIES" "curl_sra_metadata.sh" "$SERIES.project.list" "$SERIES.sra.tsv"
     SRA_STATUS=$?
 
     ## download metadata from ENA
-    download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
+    download_metadata "$SERIES" "curl_ena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
     ENA_STATUS=$?
   fi
 
@@ -360,14 +360,14 @@ function process_geo() {
     ## download metadata from SRA
     if [ $SRA_STATUS -eq 1 ]
     then
-      download_metadata "$SERIES" "./curl_sra_metadata.sh" "$SERIES.subproject.list" "$SERIES.sra.tsv"
+      download_metadata "$SERIES" "curl_sra_metadata.sh" "$SERIES.subproject.list" "$SERIES.sra.tsv"
       SRA_STATUS=$?
     fi
 
     ## download metadata from ENA
     if [ $ENA_STATUS -eq 1 ]
     then
-      download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.subproject.list" "$SERIES.ena.tsv"
+      download_metadata "$SERIES" "curl_ena_metadata.sh" "$SERIES.subproject.list" "$SERIES.ena.tsv"
       ENA_STATUS=$?
     fi
   fi
@@ -381,14 +381,14 @@ function process_geo() {
     ## download metadata from SRA
     if [ $SRA_STATUS -eq 1 ]
     then
-      download_metadata "$SERIES" "./curl_sra_metadata.sh" "$SERIES.biosample.list" "$SERIES.sra.tsv"
+      download_metadata "$SERIES" "curl_sra_metadata.sh" "$SERIES.biosample.list" "$SERIES.sra.tsv"
       SRA_STATUS=$?
     fi
 
     ## download metadata from ENA
     if [ $ENA_STATUS -eq 1 ]
     then
-      download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.biosample.list" "$SERIES.ena.tsv"
+      download_metadata "$SERIES" "curl_ena_metadata.sh" "$SERIES.biosample.list" "$SERIES.ena.tsv"
       ENA_STATUS=$?
     fi
   fi
@@ -415,7 +415,7 @@ function process_arrayexpress {
   parse_sdrf_idf $SERIES
 
   ## download metadata from ENA
-  download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.sample.list" "$SERIES.ena.tsv"
+  download_metadata "$SERIES" "curl_ena_metadata.sh" "$SERIES.sample.list" "$SERIES.ena.tsv"
   local ENA_STATUS=$?
 
   ## if failed, exit with an error
@@ -437,7 +437,7 @@ function process_bioproject {
   echo $SERIES > $SERIES.project.list
 
   ## download metadata from ENA
-  download_metadata "$SERIES" "./curl_ena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
+  download_metadata "$SERIES" "curl_ena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
   local ENA_STATUS=$?
 
   ## if failed, exit with an error
@@ -448,7 +448,7 @@ function process_bioproject {
   fi
 
   ## create sample list
-  cat $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq > $SERIES.sample.list 
+  cat $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SED]RS\d+$" | sort | uniq > $SERIES.sample.list 
 
   ## make utility files
   make_util_files $SERIES $SUBSET
@@ -457,7 +457,7 @@ function process_bioproject {
 function main () {
   if (( $# != 1 && $# != 2 ))
   then
-    >&2 echo "USAGE: ./collect_metadata.sh <series_id> [sample_list]"
+    >&2 echo "USAGE: collect_metadata.sh <series_id> [sample_list]"
     >&2 echo
     >&2 echo "(requires curl_ena_metadata.sh and parse_ena_metadata.sh present in the same directory)" 
     exit 1
@@ -475,4 +475,6 @@ function main () {
   esac
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
