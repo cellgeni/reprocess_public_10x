@@ -35,15 +35,28 @@ function parse_geo_family() {
 
   ## get bioproject ID
   grep Series_relation ${SERIES}_family.soft | perl -ne 'print "$1\n" if (m/(PRJ[A-Z]+\d+)/)' | sort | uniq  > $SERIES.project.list
+
+  if [[ ! -s $SERIES.project.list ]]
+  then
+    >&2 echo "WARNING: No project ID found in ${SERIES}_family.soft file! Trying e-utils method..."
+    GEOID=$(curl -g --retry 5 --retry-delay 1 --fail --silent \
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=${SERIES}[ACCN]+GSE[ETYP]&retmode=json" \
+    | jq -r ".esearchresult.idlist[0] // empty" 2>/dev/null)
+
+    curl -g --retry 5 --retry-delay 1 --fail --silent \
+      "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gds&id=$GEOID&retmode=json" \
+      | jq -r ".result.\"$GEOID\".bioproject // empty" 2>/dev/null \
+      | grep PRJ > $SERIES.project.list
+  fi
   
   ## get sample IDs; samples here are GSM IDs; usually for a 10x GSM==SRS==SRX, but I haven't checked *all* of the SRA you know 
   awk '
 	BEGIN {OFS="\t"}
 	# get all IDs
-  /\^SAMPLE/ { sample=gensub(/.*(GSM[0-9]+)/, "\\1", "g", $0) }
-  /Sample_geo_accession/ { geo=gensub(/.*(GSM[0-9]+)/, "\\1", "g", $0) }
-  /Sample_relation = SRA:/ { sra=gensub(/.*(SRX[0-9]+)/, "\\1", "g", $0) }
-  /Sample_relation = BioSample:/ { biosample=gensub(/.*(SAMN[0-9]+)/, "\\1", "g", $0) }
+  /\^SAMPLE/ { match($0, /GSM[0-9]+/); sample=substr($0, RSTART, RLENGTH) }
+  /Sample_geo_accession/ { match($0, /GSM[0-9]+/); geo=substr($0, RSTART, RLENGTH) }
+  /Sample_relation = SRA:/ { match($0, /SRX[0-9]+/); sra=substr($0, RSTART, RLENGTH) }
+  /Sample_relation = BioSample:/ { match($0, /SAMN[0-9]+/); biosample=substr($0, RSTART, RLENGTH) }
   
   # When all three pieces of information are found, print them as a tab-separated line
   sample && geo && sra && biosample {
@@ -55,7 +68,7 @@ function parse_geo_family() {
   cut -f 4 ${SERIES}.sample.relation.list > $SERIES.biosample.list
 
   ## first variable is used to spot dbGap and other problematic datasets;
-  local EXPIDS=`grep Series_relation ${SERIES}_family.soft | grep -v PRJ | wc -l` 
+  local EXPIDS=`grep Series_relation ${SERIES}_family.soft | grep -v PRJ | wc -l`
   
   ## few sanity checks:
   if [[ `cat $SERIES.project.list | wc -l` -gt 1 ]]
@@ -187,17 +200,17 @@ function get_sample_ids() {
       ## try to get sample, experiment, and run IDs from metadata file using GSM
       if [[ `grep $i $META` ]]
       then
-        SMPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-        EXPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-        RUNS=`grep $i $META | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        SMPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SED]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        EXPS=`grep $i $META | tr '\t' '\n' | grep -P "^[SED]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        RUNS=`grep $i $META | tr '\t' '\n' | grep -P "^[SED]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
         write_accessions $SERIES $i $SMPS $EXPS $RUNS
         STATUS=$?
       ## try to get sample, experiment, and run IDs from metadata file using BioSample
       elif [[ `grep $biosample $META` ]]
       then
-        SMPS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-        EXPS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SE]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
-        RUNS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SE]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        SMPS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SED]RS\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        EXPS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SED]RX\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
+        RUNS=`grep $biosample $META | tr '\t' '\n' | grep -P "^[SED]RR\d+$" | sort | uniq | tr '\n' ',' | sed "s/,$//"`
         write_accessions $SERIES $i $SMPS $EXPS $RUNS
         STATUS=$?
       else
@@ -229,13 +242,13 @@ subset_accessions() {
   local SERIES=$1
   local SUBSET=${2:-""}
 
-  if [[ $SUBSET != "" ]]
+  if [[ -s $SUBSET ]]
   then
     >&2 echo "Narrowing down the dataset using the file $SUBSET"
     >&2 echo "New list of the samples to be processed:"
     >&2 cat $SUBSET
     ## add newline character to the end of the file if there is none
-    sed -i -e '$a\'
+    sed -i -e '$a\' $SUBSET
     ## subset the accessions file
     grep -f $SUBSET $SERIES.sample.list > $SERIES.sample.list.tmp
     mv $SERIES.sample.list.tmp $SERIES.sample.list
@@ -248,9 +261,9 @@ subset_meta() {
   local META=$1
   local SUBSET=${2:-""}
 
-  if [[ $SUBSET != "" ]]
+  if [[ -s $SUBSET ]]
   then
-    grep -f $SUBSET $META > $META.tmp 
+    grep -f $SUBSET $META > $META.tmp
     mv $META.tmp $META
   fi
 }
@@ -317,7 +330,7 @@ function make_util_files() {
     ./parse_ena_metadata.sh $SERIES > $SERIES.parsed.tsv
   elif [[ -s "$SERIES.sra.tsv" ]]
   then
-    subset_meta $SERIES.ena.tsv $SUBSET
+    subset_meta $SERIES.sra.tsv $SUBSET
     ./parse_sra_metadata.sh $SERIES > $SERIES.parsed.tsv
   else
     >&2 echo "ERROR: No metadata file found for $SERIES!"
@@ -448,7 +461,7 @@ function process_bioproject {
   fi
 
   ## create sample list
-  cat $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SE]RS\d+$" | sort | uniq > $SERIES.sample.list 
+  cat $SERIES.ena.tsv | tr '\t' '\n' | grep -P "^[SED]RS\d+$" | sort | uniq > $SERIES.sample.list 
 
   ## make utility files
   make_util_files $SERIES $SUBSET
@@ -457,9 +470,9 @@ function process_bioproject {
 function main () {
   if (( $# != 1 && $# != 2 ))
   then
-    >&2 echo "USAGE: ./collect_metadata.sh <series_id> [sample_list]"
+    >&2 echo "USAGE: collect_metadata.sh <series_id> [sample_list]"
     >&2 echo
-    >&2 echo "(requires curl_ena_metadata.sh and parse_ena_metadata.sh present in the same directory)" 
+    >&2 echo "(requires ./curl_ena_metadata.sh and parse_ena_metadata.sh present in the same directory)" 
     exit 1
   fi
 
@@ -475,4 +488,6 @@ function main () {
   esac
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
