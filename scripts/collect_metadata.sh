@@ -39,13 +39,13 @@ function parse_geo_family() {
   if [[ ! -s $SERIES.project.list ]]
   then
     >&2 echo "WARNING: No project ID found in ${SERIES}_family.soft file! Trying e-utils method..."
-    UID=$(curl -g --retry 5 --retry-delay 1 --fail --silent \
+    GEOID=$(curl -g --retry 5 --retry-delay 1 --fail --silent \
     "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=${SERIES}[ACCN]+GSE[ETYP]&retmode=json" \
     | jq -r ".esearchresult.idlist[0] // empty" 2>/dev/null)
 
     curl -g --retry 5 --retry-delay 1 --fail --silent \
-      "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gds&id=$UID&retmode=json" \
-      | jq -r ".result.\"$UID\".bioproject // empty" 2>/dev/null \
+      "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gds&id=$GEOID&retmode=json" \
+      | jq -r ".result.\"$GEOID\".bioproject // empty" 2>/dev/null \
       | grep PRJ > $SERIES.project.list
   fi
   
@@ -354,11 +354,11 @@ function process_geo() {
   if [[ -s $SERIES.project.list ]]
   then
     ## download metadata from SRA
-    download_metadata "$SERIES" "curl_sra_metadata.sh" "$SERIES.project.list" "$SERIES.sra.tsv"
+    download_metadata "$SERIES" "./curlsra_metadata.sh" "$SERIES.project.list" "$SERIES.sra.tsv"
     SRA_STATUS=$?
 
     ## download metadata from ENA
-    download_metadata "$SERIES" "curl_ena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
+    download_metadata "$SERIES" "./curlena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
     ENA_STATUS=$?
   fi
 
@@ -373,14 +373,14 @@ function process_geo() {
     ## download metadata from SRA
     if [ $SRA_STATUS -eq 1 ]
     then
-      download_metadata "$SERIES" "curl_sra_metadata.sh" "$SERIES.subproject.list" "$SERIES.sra.tsv"
+      download_metadata "$SERIES" "./curlsra_metadata.sh" "$SERIES.subproject.list" "$SERIES.sra.tsv"
       SRA_STATUS=$?
     fi
 
     ## download metadata from ENA
     if [ $ENA_STATUS -eq 1 ]
     then
-      download_metadata "$SERIES" "curl_ena_metadata.sh" "$SERIES.subproject.list" "$SERIES.ena.tsv"
+      download_metadata "$SERIES" "./curlena_metadata.sh" "$SERIES.subproject.list" "$SERIES.ena.tsv"
       ENA_STATUS=$?
     fi
   fi
@@ -394,14 +394,14 @@ function process_geo() {
     ## download metadata from SRA
     if [ $SRA_STATUS -eq 1 ]
     then
-      download_metadata "$SERIES" "curl_sra_metadata.sh" "$SERIES.biosample.list" "$SERIES.sra.tsv"
+      download_metadata "$SERIES" "./curlsra_metadata.sh" "$SERIES.biosample.list" "$SERIES.sra.tsv"
       SRA_STATUS=$?
     fi
 
     ## download metadata from ENA
     if [ $ENA_STATUS -eq 1 ]
     then
-      download_metadata "$SERIES" "curl_ena_metadata.sh" "$SERIES.biosample.list" "$SERIES.ena.tsv"
+      download_metadata "$SERIES" "./curlena_metadata.sh" "$SERIES.biosample.list" "$SERIES.ena.tsv"
       ENA_STATUS=$?
     fi
   fi
@@ -428,7 +428,7 @@ function process_arrayexpress {
   parse_sdrf_idf $SERIES
 
   ## download metadata from ENA
-  download_metadata "$SERIES" "curl_ena_metadata.sh" "$SERIES.sample.list" "$SERIES.ena.tsv"
+  download_metadata "$SERIES" "./curlena_metadata.sh" "$SERIES.sample.list" "$SERIES.ena.tsv"
   local ENA_STATUS=$?
 
   ## if failed, exit with an error
@@ -450,7 +450,7 @@ function process_bioproject {
   echo $SERIES > $SERIES.project.list
 
   ## download metadata from ENA
-  download_metadata "$SERIES" "curl_ena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
+  download_metadata "$SERIES" "./curlena_metadata.sh" "$SERIES.project.list" "$SERIES.ena.tsv"
   local ENA_STATUS=$?
 
   ## if failed, exit with an error
@@ -472,7 +472,7 @@ function main () {
   then
     >&2 echo "USAGE: collect_metadata.sh <series_id> [sample_list]"
     >&2 echo
-    >&2 echo "(requires curl_ena_metadata.sh and parse_ena_metadata.sh present in the same directory)" 
+    >&2 echo "(requires ./curlena_metadata.sh and parse_ena_metadata.sh present in the same directory)" 
     exit 1
   fi
 
