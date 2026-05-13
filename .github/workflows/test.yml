@@ -37,6 +37,9 @@ jobs:
           - series_id: PRJNA511433
             subset_list: ""
             comment: "Regular GEO dataset but using BioProject"
+          - series_id: PRJDB14428
+            subset_list: ""
+            comment: "DDBJ BioProject dataset"
     name: "Test ${{ matrix.series_id }}: ${{ matrix.comment }}"
     
     steps:
