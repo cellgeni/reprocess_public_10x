@@ -16,50 +16,61 @@ do
   SPECIES=`grep -w $i $SERIES.sra.tsv | cut -f29`
   SPECIES=${SPECIES:-UNKNOWN}
   SRA=`grep -w $i $SERIES.sra.tsv | cut -f10`
-  sleep 0.3
-  SRABAM=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
-          .result[].files[] | 
-          select(.name | contains("bam")) | 
-          .locations[] | 
-          select((.rehydrationRequired // false) == false and (.payRequired // false) == false) | 
+
+  SUCCESS=0
+
+  # Try getting BAM file from SDL api
+  SDLBAM=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
+          .result[].files[] |
+          select(.name | contains("bam")) |
+          .locations[] |
+          select((.rehydrationRequired // false) == false and (.payRequired // false) == false) |
           .link
         '`
   sleep 0.3
-  SDLSRA=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
-            [
-              .result[]
-              .files[] 
-              | select(.type == "sra") 
-              | .locations[] 
-              | select((.payRequired // false) == false)
-            ] 
-            | map(.link) 
-            | first'`
-  sleep 0.3
-  
-  if [[ $SRABAM != "" ]]
+  if [[ $SDLBAM != "" ]]
   then
     TYPE="BAM"
-    LOC=$SRABAM
-    echo $SRABAM >> $SERIES.urls.list
+    LOC=$SDLBAM
+    echo $SDLBAM >> $SERIES.urls.list
     >&2 echo "Sample $i is available via SRA as an original submitter's BAM file: $LOC"
-  elif [[ $SDLSRA != "" ]]
+    SUCCESS=1
+  fi
+
+  # Try getting SRA file from SDL api
+  if [[ $SUCCESS -eq 0 ]]
   then
-    TYPE="SRA"
-    LOC=$SDLSRA
-    echo $SDLSRA >> $SERIES.urls.list
-    >&2 echo "Sample $i is available via NCBI/Amazon as an SRA archive: $LOC"
-  elif [[ $SRA != "" ]]
-  then 
-    LOC=$SRA
-    echo $SRA >> $SERIES.urls.list
-    >&2 echo "Sample $i is available via SRA as an SRA archive: $LOC"
-  else
-    SRA=`srapath $i`
-    LOC=$SRA
-    >&2 echo "WARNING: No ENA ftp URL found for sample $i, using 'srapath' to get the (open) Amazon link to SRA archive.."
-    echo $SRA >> $SERIES.urls.list
-    >&2 echo "Sample $i is available via NCBI/Amazon as an SRA archive: $LOC"
+    SDLSRA=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
+              [
+                .result[]
+                .files[]
+                | select(.type == "sra")
+                | .locations[]
+                | select((.payRequired // false) == false)
+              ]
+              | map(.link)
+              | first'`
+    sleep 0.3
+    if [[ $SDLSRA != "" ]]
+    then
+      TYPE="SRA"
+      LOC=$SDLSRA
+      echo $SDLSRA >> $SERIES.urls.list
+      >&2 echo "Sample $i is available via NCBI/Amazon as an SRA archive: $LOC"
+      SUCCESS=1
+    elif [[ $SRA != "" ]]
+    then
+      LOC=$SRA
+      echo $SRA >> $SERIES.urls.list
+      >&2 echo "Sample $i is available via SRA as an SRA archive: $LOC"
+      SUCCESS=1
+    else
+      SRA=`srapath $i`
+      LOC=$SRA
+      >&2 echo "WARNING: No ENA ftp URL found for sample $i, using 'srapath' to get the (open) Amazon link to SRA archive.."
+      echo $SRA >> $SERIES.urls.list
+      >&2 echo "Sample $i is available via NCBI/Amazon as an SRA archive: $LOC"
+    fi
   fi
 
   echo -e "$i\t$SPECIES\t$LOC\t$TYPE"
