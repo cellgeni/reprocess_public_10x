@@ -1,9 +1,9 @@
 SRR28758706	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/006/SRR28758706/SRR28758706_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/006/SRR28758706/SRR28758706_2.fastq.gz	ENAFQ
 SRR28758707	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/007/SRR28758707/SRR28758707_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/007/SRR28758707/SRR28758707_2.fastq.gz	ENAFQ
-SRR28758708	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/srr/SRR287/008/SRR28758708/SRR28758708.lite	SRA
-SRR28758709	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/srr/SRR287/009/SRR28758709/SRR28758709	SRA
-SRR28758710	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/srr/SRR287/010/SRR28758710/SRR28758710.lite	SRA
-SRR28758711	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/srr/SRR287/011/SRR28758711/SRR28758711.lite	SRA
+SRR28758708	Homo sapiens	https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR28758708/SRR28758708	SRA
+SRR28758709	Homo sapiens	https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR28758709/SRR28758709	SRA
+SRR28758710	Homo sapiens	https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR28758710/SRR28758710	SRA
+SRR28758711	Homo sapiens	https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR28758711/SRR28758711	SRA
 SRR28758712	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/012/SRR28758712/SRR28758712_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/012/SRR28758712/SRR28758712_2.fastq.gz	ENAFQ
 SRR28758713	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/013/SRR28758713/SRR28758713_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/013/SRR28758713/SRR28758713_2.fastq.gz	ENAFQ
 SRR28758714	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/014/SRR28758714/SRR28758714_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/014/SRR28758714/SRR28758714_2.fastq.gz	ENAFQ
@@ -23,9 +23,9 @@ SRR28758727	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/027/SRR28758727/SRR
 SRR28758728	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/028/SRR28758728/SRR28758728_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/028/SRR28758728/SRR28758728_2.fastq.gz	ENAFQ
 SRR28758729	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/029/SRR28758729/SRR28758729_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/029/SRR28758729/SRR28758729_2.fastq.gz	ENAFQ
 SRR28758730	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/030/SRR28758730/SRR28758730_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/030/SRR28758730/SRR28758730_2.fastq.gz	ENAFQ
-SRR28758731	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/srr/SRR287/031/SRR28758731/SRR28758731.lite	SRA
-SRR28758732	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/srr/SRR287/032/SRR28758732/SRR28758732.lite	SRA
-SRR28758733	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/srr/SRR287/033/SRR28758733/SRR28758733	SRA
+SRR28758731	Homo sapiens	https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR28758731/SRR28758731	SRA
+SRR28758732	Homo sapiens	https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR28758732/SRR28758732	SRA
+SRR28758733	Homo sapiens	https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR28758733/SRR28758733	SRA
 SRR28758734	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/034/SRR28758734/SRR28758734_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/034/SRR28758734/SRR28758734_2.fastq.gz	ENAFQ
 SRR28758735	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/035/SRR28758735/SRR28758735_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/035/SRR28758735/SRR28758735_2.fastq.gz	ENAFQ
 SRR28758736	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/036/SRR28758736/SRR28758736_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/036/SRR28758736/SRR28758736_2.fastq.gz	ENAFQ
@@ -37,7 +37,7 @@ SRR28758741	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/041/SRR28758741/SRR
 SRR28758742	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/042/SRR28758742/SRR28758742_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/042/SRR28758742/SRR28758742_2.fastq.gz	ENAFQ
 SRR28758743	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/043/SRR28758743/SRR28758743_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/043/SRR28758743/SRR28758743_2.fastq.gz	ENAFQ
 SRR28758744	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/044/SRR28758744/SRR28758744_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/044/SRR28758744/SRR28758744_2.fastq.gz	ENAFQ
-SRR28758745	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/srr/SRR287/045/SRR28758745/SRR28758745.lite	SRA
+SRR28758745	Homo sapiens	https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR28758745/SRR28758745	SRA
 SRR28758746	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/046/SRR28758746/SRR28758746_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/046/SRR28758746/SRR28758746_2.fastq.gz	ENAFQ
 SRR28758747	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/047/SRR28758747/SRR28758747_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/047/SRR28758747/SRR28758747_2.fastq.gz	ENAFQ
 SRR28758748	Homo sapiens	ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/048/SRR28758748/SRR28758748_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR287/048/SRR28758748/SRR28758748_2.fastq.gz	ENAFQ
