@@ -327,11 +327,11 @@ function make_util_files() {
   if [[ -s "$SERIES.ena.tsv" ]]
   then
     subset_meta $SERIES.ena.tsv $SUBSET
-    parse_ena_metadata.sh $SERIES > $SERIES.parsed.tsv
+    ./parse_ena_metadata.sh $SERIES > $SERIES.parsed.tsv
   elif [[ -s "$SERIES.sra.tsv" ]]
   then
-    subset_meta $SERIES.ena.tsv $SUBSET
-    parse_sra_metadata.sh $SERIES > $SERIES.parsed.tsv
+    subset_meta $SERIES.sra.tsv $SUBSET
+    ./parse_sra_metadata.sh $SERIES > $SERIES.parsed.tsv
   else
     >&2 echo "ERROR: No metadata file found for $SERIES!"
     exit 1
