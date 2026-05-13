@@ -14,6 +14,7 @@ do
   LOC=""
 
   SPECIES=`grep -w $i $SERIES.sra.tsv | cut -f29`
+  SPECIES=${SPECIES:-UNKNOWN}
   SRA=`grep -w $i $SERIES.sra.tsv | cut -f10` 
   SRABAM=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
           .result[].files[] | 
@@ -22,6 +23,16 @@ do
           select((.rehydrationRequired // false) == false and (.payRequired // false) == false) | 
           .link
         '`
+  SDLSRA=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
+            [
+              .result[]
+              .files[] 
+              | select(.type == "sra") 
+              | .locations[] 
+              | select((.payRequired // false) == false)
+            ] 
+            | map(.link) 
+            | first'`
 
   if [[ $SRABAM != "" ]]
   then
@@ -29,6 +40,12 @@ do
     LOC=$SRABAM
     echo $SRABAM >> $SERIES.urls.list
     >&2 echo "Sample $i is available via SRA as an original submitter's BAM file: $LOC"
+  elif [[ $SDLSRA != "" ]]
+  then
+    TYPE="SRA"
+    LOC=$SDLSRA
+    echo $SDLSRA >> $SERIES.urls.list
+    >&2 echo "Sample $i is available via NCBI/Amazon as an SRA archive: $LOC"
   elif [[ $SRA != "" ]]
   then 
     LOC=$SRA
