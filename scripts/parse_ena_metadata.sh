@@ -23,6 +23,7 @@ do
   ORIFQ=`grep -w $i $SERIES.ena.tsv | cut -f12 | grep "f.*q"`                                   ## ppl name files *all kinds of random shiz*, really
   ORIBAM=`grep -w $i $SERIES.ena.tsv | cut -f12 | tr ';' '\n' | grep -v "\.bai" | grep "\.bam"` ## don't need the BAM index which is often there
   SRA=`grep -w $i $SERIES.ena.tsv | cut -f13`
+  sleep 0.3
   SDLBAM=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
           .result[].files[] | 
           select(.name | contains("bam")) | 
@@ -30,6 +31,7 @@ do
           select((.rehydrationRequired // false) == false and (.payRequired // false) == false) | 
           .link
         '`
+  sleep 0.3
   SDLSRA=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
             [
               .result[]
@@ -40,6 +42,7 @@ do
             ] 
             | map(.link) 
             | first'`
+  sleep 0.3
 
   if [[ $AEGZ != "" ]]
   then

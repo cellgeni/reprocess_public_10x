@@ -15,7 +15,8 @@ do
 
   SPECIES=`grep -w $i $SERIES.sra.tsv | cut -f29`
   SPECIES=${SPECIES:-UNKNOWN}
-  SRA=`grep -w $i $SERIES.sra.tsv | cut -f10` 
+  SRA=`grep -w $i $SERIES.sra.tsv | cut -f10`
+  sleep 0.3
   SRABAM=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
           .result[].files[] | 
           select(.name | contains("bam")) | 
@@ -23,6 +24,7 @@ do
           select((.rehydrationRequired // false) == false and (.payRequired // false) == false) | 
           .link
         '`
+  sleep 0.3
   SDLSRA=`curl -s "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?acc=$i&accept-alternate-locations=yes" | jq -r '
             [
               .result[]
@@ -33,7 +35,8 @@ do
             ] 
             | map(.link) 
             | first'`
-
+  sleep 0.3
+  
   if [[ $SRABAM != "" ]]
   then
     TYPE="BAM"
