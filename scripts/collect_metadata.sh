@@ -35,6 +35,19 @@ function parse_geo_family() {
 
   ## get bioproject ID
   grep Series_relation ${SERIES}_family.soft | perl -ne 'print "$1\n" if (m/(PRJ[A-Z]+\d+)/)' | sort | uniq  > $SERIES.project.list
+
+  if [[ ! -s $SERIES.project.list ]]
+  then
+    >&2 echo "WARNING: No project ID found in ${SERIES}_family.soft file! Trying e-utils method..."
+    UID=$(curl -g --retry 5 --retry-delay 1 --fail --silent \
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=${SERIES}[ACCN]+GSE[ETYP]&retmode=json" \
+    | jq -r ".esearchresult.idlist[0] // empty" 2>/dev/null)
+
+    curl -g --retry 5 --retry-delay 1 --fail --silent \
+      "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gds&id=$UID&retmode=json" \
+      | jq -r ".result.\"$UID\".bioproject // empty" 2>/dev/null \
+      | grep PRJ > $SERIES.project.list
+  fi
   
   ## get sample IDs; samples here are GSM IDs; usually for a 10x GSM==SRS==SRX, but I haven't checked *all* of the SRA you know 
   awk '
@@ -55,7 +68,7 @@ function parse_geo_family() {
   cut -f 4 ${SERIES}.sample.relation.list > $SERIES.biosample.list
 
   ## first variable is used to spot dbGap and other problematic datasets;
-  local EXPIDS=`grep Series_relation ${SERIES}_family.soft | grep -v PRJ | wc -l` 
+  local EXPIDS=`grep Series_relation ${SERIES}_family.soft | grep -v PRJ | wc -l`
   
   ## few sanity checks:
   if [[ `cat $SERIES.project.list | wc -l` -gt 1 ]]
